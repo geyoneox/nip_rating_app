@@ -29,6 +29,10 @@ import AddRoundedIcon from "@mui/icons-material/AddRounded";
 export type ListPageShellProps = {
   /** Page heading. Rendered `variant="h2" component="h1"` — the page's only H1. */
   title: string;
+  /** One line under the heading, e.g. what the page is for. */
+  subtitle?: string;
+  /** Custom primary action (for example a button that opens a dialog). Used instead of createLabel. */
+  headerAction?: ReactNode;
   /**
    * Label for the primary create action, e.g. "New ticket". Omit to render no
    * create button (for a resource the current role can't create).
@@ -51,6 +55,8 @@ export type ListPageShellProps = {
 
 export const ListPageShell = ({
   title,
+  subtitle,
+  headerAction,
   createLabel,
   toolbar,
   activeFilters,
@@ -59,16 +65,24 @@ export const ListPageShell = ({
   <Box sx={{ p: { xs: 2, md: 3 } }}>
     <List
       title={
-        <Typography variant="h2" component="h1">
-          {title}
-        </Typography>
+        <Box>
+          <Typography variant="h2" component="h1">
+            {title}
+          </Typography>
+          {subtitle ? (
+            <Typography variant="body2" color="text.secondary">
+              {subtitle}
+            </Typography>
+          ) : null}
+        </Box>
       }
       headerButtons={
-        createLabel ? (
+        headerAction ??
+        (createLabel ? (
           <CreateButton variant="contained" startIcon={<AddRoundedIcon />}>
             {createLabel}
           </CreateButton>
-        ) : null
+        ) : null)
       }
     >
       {/*

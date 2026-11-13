@@ -183,6 +183,10 @@ export default defineConfig(({ mode }) => {
       __TARUVI_APP_TITLE__: JSON.stringify(env.TARUVI_APP_TITLE ?? ""),
     },
     plugins: [react(), createClientLogPlugin()],
+    server: {
+      port: 5180,
+      strictPort: true,
+    },
     optimizeDeps: {
       include: [
         "@emotion/react",

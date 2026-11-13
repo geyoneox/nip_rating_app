@@ -28,6 +28,7 @@ import {
 
 import { MenuItem } from "./MenuItem";
 import { MobileBottomNav } from "./MobileBottomNav";
+import { useNipAccess } from "../../lib/useNipAccess";
 import "./sidenav.css";
 
 const DRAWER_WIDTH_EXPANDED = 240;
@@ -60,7 +61,15 @@ export const MuiSidenav: React.FC<MuiSidenavProps> = ({ meta }) => {
   const location = useLocation();
   const t = useTranslate();
 
-  const { menuItems, selectedKey } = useMenu({ meta });
+  const { menuItems: allMenuItems, selectedKey } = useMenu({ meta });
+  const { isAdmin, isReviewer } = useNipAccess();
+  // Hide menu entries the role cannot use. The access policies are the real guard.
+  const menuItems = allMenuItems.filter((item) => {
+    const required = (item.meta as { requiresRole?: string } | undefined)?.requiresRole;
+    if (required === "nip_admin") return isAdmin;
+    if (required === "nip_reviewer") return isAdmin || isReviewer;
+    return true;
+  });
   const isAuthenticated = useIsExistAuthentication();
   const { mutate: mutateLogout } = useLogout();
   const { warnWhen, setWarnWhen } = useWarnAboutChange();

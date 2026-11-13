@@ -1,0 +1,378 @@
+{
+  "_note": "DRAFT for approval. Not applied. Group 1 = resources 1-4 (reference). Group 2 = resources 5-11 (run tables). Each group is sent as one datapackage / one migration.",
+  "group_1_reference": {
+    "name": "nip_reference",
+    "title": "NIP Rating reference tables",
+    "resources": [
+      {
+        "name": "ref_programs",
+        "title": "Programs",
+        "description": "Program names an underwriting assistant can choose (EdgePro, ElectricalPro, ...).",
+        "audit_enabled": true,
+        "schema": {
+          "fields": [
+            {"name": "id", "type": "string", "format": "uuid", "constraints": {"required": true}},
+            {"name": "name", "type": "string", "constraints": {"required": true, "unique": true}},
+            {"name": "is_active", "type": "boolean", "default": true, "constraints": {"required": true}},
+            {"name": "sort_order", "type": "integer", "default": 0, "constraints": {"required": true}},
+            {"name": "created_at", "type": "datetime", "default": "now()", "constraints": {"required": true}},
+            {"name": "updated_at", "type": "datetime", "default": "now()", "constraints": {"required": true}}
+          ],
+          "primaryKey": ["id"],
+          "indexes": [
+            {"name": "idx_sort", "fields": ["sort_order"]}
+          ]
+        }
+      },
+      {
+        "name": "ref_ocn_lookup",
+        "title": "OCN lookup",
+        "description": "Average cost new and average model year per program and vehicle type.",
+        "audit_enabled": true,
+        "schema": {
+          "fields": [
+            {"name": "id", "type": "string", "format": "uuid", "constraints": {"required": true}},
+            {"name": "program_id", "type": "string", "format": "uuid", "constraints": {"required": true}},
+            {"name": "vehicle_type", "type": "string", "constraints": {"required": true, "enum": [
+              "All Other", "Extra Heavy Trucks", "Extra Heavy Truck-Tractors", "Heavy Trucks",
+              "Heavy Truck-Tractors", "Light Trucks", "Manully Rated Veh", "Medium Trucks", "PPT",
+              "Public Auto", "Semitrailers", "Service or Utility Trailers", "Sp Mobile EQ",
+              "Trailers", "ATV/Golf Cart"]}},
+            {"name": "avg_cost_new", "type": "number", "constraints": {"required": true}, "description": "Intended numeric(14,2). See precision note."},
+            {"name": "avg_model_year", "type": "number", "constraints": {"required": true}, "description": "Intended numeric(7,2). See precision note."},
+            {"name": "created_at", "type": "datetime", "default": "now()", "constraints": {"required": true}},
+            {"name": "updated_at", "type": "datetime", "default": "now()", "constraints": {"required": true}}
+          ],
+          "primaryKey": ["id"],
+          "foreignKeys": [
+            {"fields": ["program_id"], "reference": {"resource": "ref_programs", "fields": ["id"]}, "x-actions": {"onDelete": "RESTRICT"}}
+          ],
+          "indexes": [
+            {"name": "uq_program_vehicle_type", "fields": ["program_id", "vehicle_type"], "unique": true}
+          ]
+        }
+      },
+      {
+        "name": "ref_class_codes",
+        "title": "Class codes",
+        "description": "Class codes as TEXT to keep leading zeros (07996, 03589, 01489).",
+        "audit_enabled": true,
+        "schema": {
+          "fields": [
+            {"name": "id", "type": "string", "format": "uuid", "constraints": {"required": true}},
+            {"name": "category", "type": "string", "constraints": {"required": true, "unique": true, "enum": [
+              "mobile_equipment", "semi_trailer", "utility_trailer", "trailer", "tractor_over_45000",
+              "tractor_up_to_45000", "truck_45001_plus", "truck_20001_45000", "truck_10001_20000",
+              "truck_up_to_10000", "private_passenger"]}},
+            {"name": "standard_code", "type": "string", "constraints": {"required": true}},
+            {"name": "special_state_code", "type": "string", "constraints": {"required": true}, "description": "Used for CA, FL, GA, TX"},
+            {"name": "gvw_min", "type": "integer"},
+            {"name": "gvw_max", "type": "integer"},
+            {"name": "notes", "type": "string"},
+            {"name": "created_at", "type": "datetime", "default": "now()", "constraints": {"required": true}},
+            {"name": "updated_at", "type": "datetime", "default": "now()", "constraints": {"required": true}}
+          ],
+          "primaryKey": ["id"]
+        }
+      },
+      {
+        "name": "ref_rules",
+        "title": "Rules",
+        "description": "Admin-editable settings. At least one of value_number, value_text, value_json must be set (not enforceable in the schema; see notes).",
+        "audit_enabled": true,
+        "schema": {
+          "fields": [
+            {"name": "id", "type": "string", "format": "uuid", "constraints": {"required": true}},
+            {"name": "rule_key", "type": "string", "constraints": {"required": true, "unique": true}},
+            {"name": "value_number", "type": "number"},
+            {"name": "value_text", "type": "string"},
+            {"name": "value_json", "type": "object"},
+            {"name": "description", "type": "string"},
+            {"name": "created_at", "type": "datetime", "default": "now()", "constraints": {"required": true}},
+            {"name": "updated_at", "type": "datetime", "default": "now()", "constraints": {"required": true}}
+          ],
+          "primaryKey": ["id"]
+        }
+      }
+    ]
+  },
+  "group_2_run_tables": {
+    "name": "nip_run_data",
+    "title": "NIP Rating run tables",
+    "resources": [
+      {
+        "name": "nip_runs",
+        "title": "Runs",
+        "description": "One row per uploaded application. owner_id is set server-side.",
+        "audit_enabled": true,
+        "schema": {
+          "fields": [
+            {"name": "id", "type": "string", "format": "uuid", "constraints": {"required": true}},
+            {"name": "owner_id", "type": "string", "format": "uuid", "constraints": {"required": true}},
+            {"name": "file_name", "type": "string", "constraints": {"required": true}},
+            {"name": "file_ref", "type": "string", "constraints": {"required": true}},
+            {"name": "source_type", "type": "string", "constraints": {"required": true, "enum": ["pdf", "xlsx", "xls"]}},
+            {"name": "program_id", "type": "string", "format": "uuid"},
+            {"name": "epic_id", "type": "string"},
+            {"name": "policy_number", "type": "string"},
+            {"name": "broker_email", "type": "string"},
+            {"name": "insured_name", "type": "string"},
+            {"name": "insured_mailing_address", "type": "string"},
+            {"name": "insured_city", "type": "string"},
+            {"name": "insured_state", "type": "string"},
+            {"name": "insured_zip", "type": "string"},
+            {"name": "insured_sic", "type": "string"},
+            {"name": "im_valuation_type", "type": "string", "constraints": {"enum": ["Replacement Cost", "Actual Cash Value"]}},
+            {"name": "extraction_status", "type": "string", "default": "processing", "constraints": {"required": true, "enum": ["processing", "complete", "failed"]}},
+            {"name": "extraction_progress", "type": "object", "description": "{processed, total}"},
+            {"name": "extraction_error", "type": "string"},
+            {"name": "validation_status", "type": "string", "default": "not_started", "constraints": {"required": true, "enum": ["not_started", "processing", "complete", "cancelled", "failed"]}},
+            {"name": "validation_progress", "type": "object", "description": "{processed, total}"},
+            {"name": "validation_error", "type": "string"},
+            {"name": "validation_cancel_requested", "type": "boolean", "default": false, "constraints": {"required": true}},
+            {"name": "queue_diagnostics", "type": "object", "description": "Counts of skipped/duplicate/invalid/trailer VINs"},
+            {"name": "active_job_id", "type": "string"},
+            {"name": "lifecycle_status", "type": "string", "default": "active", "constraints": {"required": true, "enum": ["active", "deleting"]}},
+            {"name": "last_progress_at", "type": "datetime"},
+            {"name": "created_at", "type": "datetime", "default": "now()", "constraints": {"required": true}},
+            {"name": "updated_at", "type": "datetime", "default": "now()", "constraints": {"required": true}}
+          ],
+          "primaryKey": ["id"],
+          "foreignKeys": [
+            {"fields": ["owner_id"], "reference": {"resource": "auth_user", "fields": ["id"]}, "x-actions": {"onDelete": "RESTRICT"}},
+            {"fields": ["program_id"], "reference": {"resource": "ref_programs", "fields": ["id"]}, "x-actions": {"onDelete": "RESTRICT"}}
+          ],
+          "indexes": [
+            {"name": "idx_owner", "fields": ["owner_id"]},
+            {"name": "idx_created_desc", "expression": "created_at DESC"},
+            {"name": "idx_extraction_status", "fields": ["extraction_status"]},
+            {"name": "idx_validation_status", "fields": ["validation_status"]}
+          ],
+          "search_fields": [
+            {"field": "file_name", "weight": "A"},
+            {"field": "insured_name", "weight": "A"}
+          ]
+        }
+      },
+      {
+        "name": "nip_vehicles",
+        "title": "Vehicles (AUTO rows)",
+        "description": "Raw text kept in *_raw columns; parsed columns are nullable. Calculated columns are written by functions only.",
+        "audit_enabled": true,
+        "schema": {
+          "fields": [
+            {"name": "id", "type": "string", "format": "uuid", "constraints": {"required": true}},
+            {"name": "run_id", "type": "string", "format": "uuid", "constraints": {"required": true}},
+            {"name": "owner_id", "type": "string", "format": "uuid", "constraints": {"required": true}},
+            {"name": "row_number", "type": "integer", "constraints": {"required": true}},
+            {"name": "vin", "type": "string"},
+            {"name": "make", "type": "string"},
+            {"name": "model", "type": "string"},
+            {"name": "body_type", "type": "string"},
+            {"name": "year_raw", "type": "string"},
+            {"name": "year", "type": "integer"},
+            {"name": "garaging_address", "type": "string"},
+            {"name": "garaging_city", "type": "string"},
+            {"name": "garaging_county", "type": "string"},
+            {"name": "garaging_state", "type": "string"},
+            {"name": "garaging_zip", "type": "string"},
+            {"name": "radius_raw", "type": "string"},
+            {"name": "radius", "type": "integer"},
+            {"name": "cost_new_raw", "type": "string"},
+            {"name": "cost_new", "type": "number", "description": "Intended numeric(14,2)"},
+            {"name": "stated_amount_raw", "type": "string"},
+            {"name": "stated_amount", "type": "number", "description": "Intended numeric(14,2)"},
+            {"name": "comp_otc", "type": "string", "description": "'Yes' or a deductible amount, as read"},
+            {"name": "coll", "type": "string", "description": "'Yes' or a deductible amount, as read"},
+            {"name": "net_veh_dr_cr", "type": "string"},
+            {"name": "sic", "type": "string"},
+            {"name": "is_trailer", "type": "boolean", "default": false, "constraints": {"required": true}},
+            {"name": "is_duplicate", "type": "boolean", "default": false, "constraints": {"required": true}},
+            {"name": "edited_fields", "type": "object", "default": {}, "constraints": {"required": true}, "description": "{FIELD: {original, edited, edited_by, edited_at}}; original saved on first edit, never overwritten"},
+            {"name": "class_code", "type": "string", "description": "CALCULATED by function"},
+            {"name": "ocn_value", "type": "number", "description": "CALCULATED by function. Intended numeric(14,2)"},
+            {"name": "ba_comp_answer", "type": "string", "description": "CALCULATED by function"},
+            {"name": "ba_comp_deductible", "type": "number", "description": "CALCULATED by function. Intended numeric(12,2)"},
+            {"name": "ba_coll_answer", "type": "string", "description": "CALCULATED by function"},
+            {"name": "ba_coll_deductible", "type": "number", "description": "CALCULATED by function. Intended numeric(12,2)"},
+            {"name": "created_at", "type": "datetime", "default": "now()", "constraints": {"required": true}},
+            {"name": "updated_at", "type": "datetime", "default": "now()", "constraints": {"required": true}}
+          ],
+          "primaryKey": ["id"],
+          "foreignKeys": [
+            {"fields": ["run_id"], "reference": {"resource": "nip_runs", "fields": ["id"]}, "x-actions": {"onDelete": "RESTRICT"}}
+          ],
+          "indexes": [
+            {"name": "uq_run_row", "fields": ["run_id", "row_number"], "unique": true},
+            {"name": "idx_run", "fields": ["run_id"]},
+            {"name": "idx_run_vin", "fields": ["run_id", "vin"]},
+            {"name": "idx_owner", "fields": ["owner_id"]}
+          ]
+        }
+      },
+      {
+        "name": "nip_validation_results",
+        "title": "Validation results",
+        "description": "One PriceDigest result per VIN per run. 'Not Available' becomes null in numeric columns but stays in raw_result.",
+        "schema": {
+          "fields": [
+            {"name": "id", "type": "string", "format": "uuid", "constraints": {"required": true}},
+            {"name": "run_id", "type": "string", "format": "uuid", "constraints": {"required": true}},
+            {"name": "owner_id", "type": "string", "format": "uuid", "constraints": {"required": true}},
+            {"name": "vin", "type": "string", "constraints": {"required": true}},
+            {"name": "success", "type": "boolean", "default": false, "constraints": {"required": true}},
+            {"name": "skipped", "type": "boolean", "default": false, "constraints": {"required": true}},
+            {"name": "error", "type": "string"},
+            {"name": "is_tractor", "type": "string"},
+            {"name": "gross_vehicle_weight", "type": "number", "description": "Intended numeric(12,2)"},
+            {"name": "gross_combine_weight", "type": "number", "description": "Intended numeric(12,2)"},
+            {"name": "complete_incomplete", "type": "string"},
+            {"name": "msrp", "type": "number", "description": "Intended numeric(14,2)"},
+            {"name": "retail_value", "type": "number", "description": "Intended numeric(14,2)"},
+            {"name": "wholesale_value", "type": "number", "description": "Intended numeric(14,2)"},
+            {"name": "pd_make", "type": "string"},
+            {"name": "pd_model", "type": "string"},
+            {"name": "pd_year", "type": "string"},
+            {"name": "vehicle_type", "type": "string"},
+            {"name": "vehicle_subtype", "type": "string"},
+            {"name": "raw_result", "type": "object"},
+            {"name": "validated_at", "type": "datetime"},
+            {"name": "created_at", "type": "datetime", "default": "now()", "constraints": {"required": true}},
+            {"name": "updated_at", "type": "datetime", "default": "now()", "constraints": {"required": true}}
+          ],
+          "primaryKey": ["id"],
+          "foreignKeys": [
+            {"fields": ["run_id"], "reference": {"resource": "nip_runs", "fields": ["id"]}, "x-actions": {"onDelete": "RESTRICT"}}
+          ],
+          "indexes": [
+            {"name": "uq_run_vin", "fields": ["run_id", "vin"], "unique": true},
+            {"name": "idx_run", "fields": ["run_id"]},
+            {"name": "idx_run_success", "fields": ["run_id", "success"]}
+          ]
+        }
+      },
+      {
+        "name": "nip_im_items",
+        "title": "Inland Marine items",
+        "audit_enabled": true,
+        "schema": {
+          "fields": [
+            {"name": "id", "type": "string", "format": "uuid", "constraints": {"required": true}},
+            {"name": "run_id", "type": "string", "format": "uuid", "constraints": {"required": true}},
+            {"name": "owner_id", "type": "string", "format": "uuid", "constraints": {"required": true}},
+            {"name": "row_number", "type": "integer", "constraints": {"required": true}},
+            {"name": "type", "type": "string"},
+            {"name": "manufacturer", "type": "string"},
+            {"name": "description", "type": "string"},
+            {"name": "model", "type": "string"},
+            {"name": "model_year", "type": "string"},
+            {"name": "serial_no", "type": "string"},
+            {"name": "amount_of_insurance_raw", "type": "string"},
+            {"name": "amount_of_insurance", "type": "number", "description": "Intended numeric(14,2)"},
+            {"name": "full_description", "type": "string"},
+            {"name": "is_small_tool", "type": "boolean", "default": false},
+            {"name": "is_crane", "type": "boolean", "default": false},
+            {"name": "is_duplicate", "type": "boolean", "default": false},
+            {"name": "edited_fields", "type": "object", "default": {}, "constraints": {"required": true}},
+            {"name": "created_at", "type": "datetime", "default": "now()", "constraints": {"required": true}},
+            {"name": "updated_at", "type": "datetime", "default": "now()", "constraints": {"required": true}}
+          ],
+          "primaryKey": ["id"],
+          "foreignKeys": [
+            {"fields": ["run_id"], "reference": {"resource": "nip_runs", "fields": ["id"]}, "x-actions": {"onDelete": "RESTRICT"}}
+          ],
+          "indexes": [
+            {"name": "uq_run_row", "fields": ["run_id", "row_number"], "unique": true},
+            {"name": "idx_run", "fields": ["run_id"]},
+            {"name": "idx_run_serial", "fields": ["run_id", "serial_no"]}
+          ]
+        }
+      },
+      {
+        "name": "nip_drivers",
+        "title": "Drivers",
+        "description": "SENSITIVE: first_name, middle_name, last_name, date_of_birth, date_of_birth_raw, license_number. Audit logging NOT enabled (no field masking documented).",
+        "audit_enabled": false,
+        "schema": {
+          "fields": [
+            {"name": "id", "type": "string", "format": "uuid", "constraints": {"required": true}},
+            {"name": "run_id", "type": "string", "format": "uuid", "constraints": {"required": true}},
+            {"name": "owner_id", "type": "string", "format": "uuid", "constraints": {"required": true}},
+            {"name": "row_number", "type": "integer", "constraints": {"required": true}},
+            {"name": "first_name", "type": "string"},
+            {"name": "middle_name", "type": "string"},
+            {"name": "last_name", "type": "string"},
+            {"name": "date_of_birth", "type": "date"},
+            {"name": "date_of_birth_raw", "type": "string"},
+            {"name": "license_state", "type": "string"},
+            {"name": "license_number", "type": "string"},
+            {"name": "is_duplicate", "type": "boolean", "default": false},
+            {"name": "edited_fields", "type": "object", "default": {}, "constraints": {"required": true}},
+            {"name": "created_at", "type": "datetime", "default": "now()", "constraints": {"required": true}},
+            {"name": "updated_at", "type": "datetime", "default": "now()", "constraints": {"required": true}}
+          ],
+          "primaryKey": ["id"],
+          "foreignKeys": [
+            {"fields": ["run_id"], "reference": {"resource": "nip_runs", "fields": ["id"]}, "x-actions": {"onDelete": "RESTRICT"}}
+          ],
+          "indexes": [
+            {"name": "uq_run_row", "fields": ["run_id", "row_number"], "unique": true},
+            {"name": "idx_run", "fields": ["run_id"]},
+            {"name": "idx_run_license", "fields": ["run_id", "license_number"]}
+          ]
+        }
+      },
+      {
+        "name": "nip_reports",
+        "title": "Reports (RiskMeter, OSHA, SAFER)",
+        "schema": {
+          "fields": [
+            {"name": "id", "type": "string", "format": "uuid", "constraints": {"required": true}},
+            {"name": "run_id", "type": "string", "format": "uuid", "constraints": {"required": true}},
+            {"name": "owner_id", "type": "string", "format": "uuid", "constraints": {"required": true}},
+            {"name": "report_type", "type": "string", "constraints": {"required": true, "enum": ["riskmeter", "osha", "safer"]}},
+            {"name": "parameters", "type": "object", "description": "Address, selected reports, search type. Never passwords."},
+            {"name": "status", "type": "string", "default": "processing", "constraints": {"required": true, "enum": ["processing", "complete", "failed"]}},
+            {"name": "error", "type": "string"},
+            {"name": "file_ref", "type": "string"},
+            {"name": "combined_file_ref", "type": "string"},
+            {"name": "created_at", "type": "datetime", "default": "now()", "constraints": {"required": true}},
+            {"name": "updated_at", "type": "datetime", "default": "now()", "constraints": {"required": true}}
+          ],
+          "primaryKey": ["id"],
+          "foreignKeys": [
+            {"fields": ["run_id"], "reference": {"resource": "nip_runs", "fields": ["id"]}, "x-actions": {"onDelete": "RESTRICT"}}
+          ],
+          "indexes": [
+            {"name": "idx_run", "fields": ["run_id"]},
+            {"name": "idx_run_type", "fields": ["run_id", "report_type"]}
+          ]
+        }
+      },
+      {
+        "name": "nip_exports",
+        "title": "Exports",
+        "schema": {
+          "fields": [
+            {"name": "id", "type": "string", "format": "uuid", "constraints": {"required": true}},
+            {"name": "run_id", "type": "string", "format": "uuid", "constraints": {"required": true}},
+            {"name": "owner_id", "type": "string", "format": "uuid", "constraints": {"required": true}},
+            {"name": "export_type", "type": "string", "constraints": {"required": true, "enum": ["ba_worksheet", "im_worksheet", "drivers_csv", "default_workbook"]}},
+            {"name": "file_ref", "type": "string", "constraints": {"required": true}},
+            {"name": "file_name", "type": "string", "constraints": {"required": true}},
+            {"name": "created_by", "type": "string", "format": "uuid", "constraints": {"required": true}},
+            {"name": "created_at", "type": "datetime", "default": "now()", "constraints": {"required": true}},
+            {"name": "updated_at", "type": "datetime", "default": "now()", "constraints": {"required": true}}
+          ],
+          "primaryKey": ["id"],
+          "foreignKeys": [
+            {"fields": ["run_id"], "reference": {"resource": "nip_runs", "fields": ["id"]}, "x-actions": {"onDelete": "RESTRICT"}}
+          ],
+          "indexes": [
+            {"name": "idx_run", "fields": ["run_id"]}
+          ]
+        }
+      }
+    ]
+  }
+}

@@ -28,8 +28,13 @@ import { LoginRedirect } from "./components/auth/LoginRedirect";
 import { ColorModeContextProvider, ColorModeContext } from "./contexts/color-mode";
 import {AppSettingsProvider, useAppSettings} from "./contexts/app-settings";
 import { useContext, useRef, useEffect } from "react";
-import { Home } from "./pages/home";
 import { Login } from "./pages/login";
+import { RunsList } from "./pages/runs/list";
+import { RunShow } from "./pages/runs/show";
+import { AdminPage, ReportsPage } from "./pages/admin";
+import FolderOpenRoundedIcon from "@mui/icons-material/FolderOpenRounded";
+import AssessmentRoundedIcon from "@mui/icons-material/AssessmentRounded";
+import AdminPanelSettingsRoundedIcon from "@mui/icons-material/AdminPanelSettingsRounded";
 import { useNavkitProfileMenuItems } from "./navkit/useNavkitProfileMenuItems";
 
 const AppContent = () => {
@@ -77,7 +82,22 @@ const AppContent = () => {
                 authProvider={taruviAuthProvider}
                 // accessControlProvider={taruviAccessControlProvider} // Uncomment to enable Cerbos-based access control
                 resources={[
-                  // Add your resources here
+                  {
+                    name: "nip_runs",
+                    list: "/runs",
+                    show: "/runs/show/:id",
+                    meta: { label: "Runs", icon: <FolderOpenRoundedIcon /> },
+                  },
+                  {
+                    name: "usage-reports",
+                    list: "/usage-reports",
+                    meta: { label: "Usage reports", icon: <AssessmentRoundedIcon />, requiresRole: "nip_reviewer" },
+                  },
+                  {
+                    name: "admin",
+                    list: "/admin",
+                    meta: { label: "Admin", icon: <AdminPanelSettingsRoundedIcon />, requiresRole: "nip_admin" },
+                  },
                 ]}
                 options={{
                   syncWithLocation: true,
@@ -119,7 +139,11 @@ const AppContent = () => {
                       </Authenticated>
                     }
                   >
-                    <Route index element={<Home />} />
+                    <Route index element={<Navigate to="/runs" replace />} />
+                    <Route path="/runs" element={<RunsList />} />
+                    <Route path="/runs/show/:id" element={<RunShow />} />
+                    <Route path="/usage-reports" element={<ReportsPage />} />
+                    <Route path="/admin" element={<AdminPage />} />
                     <Route path="*" element={<ErrorComponent />} />
                   </Route>
                 </Routes>
