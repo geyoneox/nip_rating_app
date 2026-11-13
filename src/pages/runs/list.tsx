@@ -26,6 +26,7 @@ import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import ClearRoundedIcon from "@mui/icons-material/ClearRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import FilterAltRoundedIcon from "@mui/icons-material/FilterAltRounded";
+import FolderOpenRoundedIcon from "@mui/icons-material/FolderOpenRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import { ListPageShell, PagerBar } from "../../components";
 import { NewValidationModal } from "./NewValidationModal";
@@ -123,6 +124,19 @@ export const RunsList = () => {
         renderCell: (p) => model.page * model.pageSize + (p.api.getRowIndexRelativeToVisibleRows(p.id) ?? 0) + 1,
       },
       {
+        field: "open",
+        headerName: "",
+        width: 110,
+        sortable: false,
+        renderCell: ({ row }) => (
+          <Tooltip title="Open this file to validate more VINs or export again">
+            <Button size="small" variant="outlined" startIcon={<FolderOpenRoundedIcon fontSize="small" />} onClick={() => navigate(`/runs/show/${row.id}`)}>
+              Open
+            </Button>
+          </Tooltip>
+        ),
+      },
+      {
         field: "insured_name",
         headerName: "Insured / Company",
         flex: 1,
@@ -192,7 +206,7 @@ export const RunsList = () => {
         renderCell: ({ row }) =>
           canEditRun(row) ? (
             <Tooltip title="Delete run">
-              <IconButton size="small" aria-label={`Delete ${row.file_name}`} onClick={() => setDeleting(row)}>
+              <IconButton size="small" aria-label={`Delete ${row.file_name}`} onClick={(e) => { e.stopPropagation(); setDeleting(row); }}>
                 <DeleteOutlineRoundedIcon fontSize="small" />
               </IconButton>
             </Tooltip>
@@ -346,8 +360,9 @@ export const RunsList = () => {
         autoHeight
         hideFooter
         disableRowSelectionOnClick
+        onRowClick={(p) => navigate(`/runs/show/${p.id}`)}
         getRowHeight={() => "auto"}
-        sx={{ "& .MuiDataGrid-cell": { py: 1, display: "flex", alignItems: "center" } }}
+        sx={{ "& .MuiDataGrid-cell": { py: 1, display: "flex", alignItems: "center" }, "& .MuiDataGrid-row": { cursor: "pointer" } }}
         slots={{
           noRowsOverlay: () => (
             <Stack height="100%" alignItems="center" justifyContent="center" spacing={1} sx={{ p: 4 }}>
