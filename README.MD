@@ -1,4 +1,4 @@
-# Taruvi Refine Template (Refine v5)
+# Taruvi Refine Template (Refine v5) -- 
 
 The standard starter template for building Taruvi apps with **Refine v5 + React +
 MUI + TypeScript**, pre-wired to the Taruvi providers and MCP server.

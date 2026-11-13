@@ -1,136 +1,76 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useMemo, useState } from "react";
-import Box from "@mui/material/Box";
+import InputAdornment from "@mui/material/InputAdornment";
 import Button from "@mui/material/Button";
-import Checkbox from "@mui/material/Checkbox";
-import Chip from "@mui/material/Chip";
-import FormControlLabel from "@mui/material/FormControlLabel";
-import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
+import SearchRounded from "@mui/icons-material/SearchRounded";
 import { WideTable, type WideCol } from "../../../components/WideTable";
-import { fmtMoney, saveEdit, type NipImItem, type NipRun } from "../../../lib/nip";
+import type { NipImItem } from "../../../lib/nip";
 
 type Props = {
-  run: NipRun;
   items: NipImItem[];
-  canEdit: boolean;
   exportBusy: boolean;
   onExport: () => void;
-  onChanged: () => void;
-  editingDisabledReason?: string | null;
 };
 
-const VALUATIONS = ["Replacement Cost", "Actual Cash Value"];
-const isEdited = (r: NipImItem, key: string) => Boolean(r.edited_fields && r.edited_fields[key]);
+// manufacturer + type + description + model, as the IM worksheet writes it
+const describe = (r: NipImItem) => {
+  const joined = [r.manufacturer, r.type, r.description, r.model]
+    .map((p) => (p ?? "").trim())
+    .filter(Boolean)
+    .join(" ");
+  return joined || (r.full_description ?? "").trim();
+};
 
-export const ImTab = ({ run, items, canEdit, exportBusy, onExport, onChanged, editingDisabledReason }: Props) => {
-  const [hideDup, setHideDup] = useState(true);
-  const [savingValuation, setSavingValuation] = useState(false);
-  const [valuationError, setValuationError] = useState<string | null>(null);
+const amountText = (r: NipImItem) => (r.amount_of_insurance != null ? String(r.amount_of_insurance) : (r.amount_of_insurance_raw ?? ""));
 
-  const shown = useMemo(() => items.filter((i) => !hideDup || !i.is_duplicate), [items, hideDup]);
-  const dupCount = items.filter((i) => i.is_duplicate).length;
-  const smallTools = items.filter((i) => i.is_small_tool && !i.is_duplicate);
-  const largeItems = items.filter((i) => !i.is_small_tool && !i.is_duplicate);
-  const total = largeItems.reduce((sum, i) => sum + (i.amount_of_insurance ?? 0), 0);
+const COLS: WideCol<NipImItem>[] = [
+  { key: "row_number", label: "#", width: 60, value: (r) => r.row_number },
+  { key: "description", label: "Description", width: 360, value: describe },
+  { key: "model_year", label: "Model Year", width: 140, value: (r) => r.model_year ?? "" },
+  { key: "serial_no", label: "ID / Serial No", width: 240, value: (r) => r.serial_no ?? "" },
+  { key: "amount_of_insurance", label: "Amount of Insurance", width: 200, value: amountText },
+];
 
-  const setValuation = async (value: string) => {
-    setValuationError(null);
-    try {
-      setSavingValuation(true);
-      await saveEdit(run.id, "run", run.id, { im_valuation_type: value === "" ? null : value });
-      onChanged();
-    } catch (e: any) {
-      setValuationError(e?.message ?? "Could not save.");
-    } finally {
-      setSavingValuation(false);
-    }
-  };
+export const ImTab = ({ items, exportBusy, onExport }: Props) => {
+  const [query, setQuery] = useState("");
 
-  const onSave = async (row: NipImItem, col: WideCol<NipImItem>, value: string) => {
-    await saveEdit(run.id, "im_item", row.id, { [col.key]: value.trim() === "" ? null : value.trim() });
-    onChanged();
-  };
-
-  const cols: WideCol<NipImItem>[] = [
-    {
-      key: "type",
-      label: "Type",
-      width: 150,
-      editable: true,
-      value: (r) => r.type ?? "",
-      render: (r) => (
-        <Stack direction="row" spacing={0.5} alignItems="center">
-          <span>{r.type ?? ""}</span>
-          {r.is_crane ? <Chip size="small" label="CRANE" /> : null}
-          {r.is_small_tool ? <Chip size="small" variant="outlined" label="SMALL TOOL" /> : null}
-          {r.is_duplicate ? <Chip size="small" color="warning" label="DUPLICATE" /> : null}
-        </Stack>
-      ),
-    },
-    { key: "manufacturer", label: "Manufacturer", width: 150, editable: true, value: (r) => r.manufacturer ?? "" },
-    { key: "description", label: "Description", width: 240, editable: true, value: (r) => r.description ?? "" },
-    { key: "model", label: "Model", width: 140, editable: true, value: (r) => r.model ?? "" },
-    { key: "model_year", label: "Year", width: 80, editable: true, value: (r) => r.model_year ?? "" },
-    { key: "serial_no", label: "Serial No.", width: 170, editable: true, value: (r) => r.serial_no ?? "" },
-    {
-      key: "amount_of_insurance",
-      label: "Amount of Insurance",
-      width: 170,
-      align: "right",
-      editable: true,
-      editValue: (r) => (r.amount_of_insurance != null ? String(r.amount_of_insurance) : (r.amount_of_insurance_raw ?? "")),
-      value: (r) => (r.amount_of_insurance != null ? fmtMoney(r.amount_of_insurance) : (r.amount_of_insurance_raw ?? "")),
-    },
-  ];
+  const shown = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter((r) => [describe(r), r.model_year ?? "", r.serial_no ?? "", amountText(r)].some((v) => String(v).toLowerCase().includes(q)));
+  }, [items, query]);
 
   return (
     <Stack spacing={2}>
-      <Stack direction="row" flexWrap="wrap" gap={1.5} alignItems="center">
-        <TextField
-          select
-          size="small"
-          label="Valuation type"
-          value={run.im_valuation_type ?? ""}
-          disabled={!canEdit || savingValuation || Boolean(editingDisabledReason)}
-          onChange={(e) => setValuation(e.target.value)}
-          error={Boolean(valuationError)}
-          helperText={valuationError ?? undefined}
-          InputLabelProps={{ shrink: true }}
-          sx={{ minWidth: 220 }}
-        >
-          <MenuItem value="">
-            <em>Not set</em>
-          </MenuItem>
-          {VALUATIONS.map((v) => (
-            <MenuItem key={v} value={v}>
-              {v}
-            </MenuItem>
-          ))}
-        </TextField>
-        <Chip label={`Equipment: ${largeItems.length}`} variant="outlined" />
-        <Chip label={`Small tools: ${smallTools.length}`} variant="outlined" />
-        <Chip label={`Total: ${fmtMoney(total)}`} variant="outlined" />
-        <FormControlLabel control={<Checkbox size="small" checked={hideDup} onChange={(e) => setHideDup(e.target.checked)} />} label={`Hide duplicate items (${dupCount})`} />
-        <Box sx={{ flexGrow: 1 }} />
-        <Button variant="contained" disabled={exportBusy || items.length === 0} onClick={onExport}>
+      <Stack direction="row" justifyContent="flex-end">
+        <Button variant="contained" color="success" disabled={exportBusy || items.length === 0} onClick={onExport}>
           Export IM Worksheet
         </Button>
       </Stack>
 
+      <TextField
+        size="small"
+        placeholder="Filter IM rows by description, year, serial, or amount"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        sx={{ maxWidth: 440 }}
+        InputProps={{
+          startAdornment: (
+            <InputAdornment position="start">
+              <SearchRounded fontSize="small" />
+            </InputAdornment>
+          ),
+        }}
+      />
+
       <WideTable<NipImItem>
-        noun="IM items"
-        columns={cols}
+        noun="IM rows"
+        columns={COLS}
         rows={shown}
         rowId={(r) => r.id}
-        canEdit={canEdit}
-        editingDisabledReason={editingDisabledReason}
-        onSave={onSave}
-        isEdited={(r, c) => isEdited(r, c.key)}
         emptyMessage={<Typography color="text.secondary">No inland marine items extracted.</Typography>}
-        rowSx={(r) => (r.is_duplicate ? { opacity: 0.6 } : undefined)}
       />
     </Stack>
   );

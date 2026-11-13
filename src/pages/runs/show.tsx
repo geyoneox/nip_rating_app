@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useList, useOne } from "@refinedev/core";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import Alert from "@mui/material/Alert";
@@ -19,7 +19,12 @@ import Tabs from "@mui/material/Tabs";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
+import BarChartRoundedIcon from "@mui/icons-material/BarChartRounded";
+import BuildRoundedIcon from "@mui/icons-material/BuildRounded";
+import DescriptionRoundedIcon from "@mui/icons-material/DescriptionRounded";
 import ExpandMoreRoundedIcon from "@mui/icons-material/ExpandMoreRounded";
+import LocalShippingRoundedIcon from "@mui/icons-material/LocalShippingRounded";
+import VisibilityRoundedIcon from "@mui/icons-material/VisibilityRounded";
 import { AutoTab } from "./tabs/AutoTab";
 import { ImTab } from "./tabs/ImTab";
 import { DriverTab } from "./tabs/DriverTab";
@@ -47,6 +52,18 @@ const TABS = ["auto", "im", "driver", "riskmeter", "osha", "safer"] as const;
 type TabKey = (typeof TABS)[number];
 const TAB_LABEL: Record<TabKey, string> = { auto: "AUTO", im: "IM", driver: "DRIVER", riskmeter: "RiskMeter", osha: "OSHA", safer: "SAFER" };
 
+type ExportKind = "ba" | "im" | "drivers" | "default";
+const EXPORT_BUTTONS: Array<{
+  kind: ExportKind;
+  label: string;
+  icon: ReactNode;
+  enabled: (c: { hasVehicles: boolean; hasIm: boolean; hasDrivers: boolean }) => boolean;
+}> = [
+  { kind: "ba", label: "Export BA Worksheet", icon: <BarChartRoundedIcon />, enabled: (c) => c.hasVehicles },
+  { kind: "im", label: "Export IM Worksheet", icon: <BuildRoundedIcon />, enabled: (c) => c.hasIm },
+  { kind: "default", label: "Export Default", icon: <DescriptionRoundedIcon />, enabled: (c) => c.hasVehicles || c.hasIm || c.hasDrivers },
+  { kind: "drivers", label: "Export Drivers CSV", icon: <LocalShippingRoundedIcon />, enabled: (c) => c.hasDrivers },
+];
 const ALL = { pagination: { mode: "off" as const } };
 const BATCH_SIZE = 50; // VINs sent to the scraper per request
 const STALE_MS = 5 * 60 * 1000;
@@ -56,7 +73,7 @@ export const RunShow = () => {
   const navigate = useNavigate();
   const [search, setSearch] = useSearchParams();
   const tab = (TABS.includes(search.get("tab") as TabKey) ? search.get("tab") : "auto") as TabKey;
-  const { canEditRun, isReviewer, isAdmin, canSeeSensitive } = useNipAccess();
+  const { canEditRun, isReviewer, isAdmin } = useNipAccess();
 
   const [banner, setBanner] = useState<string | null>(null);
   const [exporting, setExporting] = useState<string | null>(null);
@@ -149,7 +166,7 @@ export const RunShow = () => {
     }
   };
 
-  const doExport = async (kind: "ba" | "im" | "drivers" | "default") => {
+  const doExport = async (kind: ExportKind) => {
     setExporting(kind);
     setBanner(null);
     try {
@@ -157,7 +174,7 @@ export const RunShow = () => {
       if (out?.warning) setBanner(out.warning);
       await openExport(out);
     } catch (e: any) {
-      err(e.message);
+      err(/not found|404|does not exist|no function/i.test(String(e?.message)) ? "This export is not available yet." : e.message);
     } finally {
       setExporting(null);
     }
@@ -256,20 +273,25 @@ export const RunShow = () => {
               renderInput={(p) => <TextField {...p} label="Program Name" placeholder="Select program..." InputLabelProps={{ shrink: true }} />}
               noOptionsText="No programs available"
             />
-            <Button variant="outlined" disabled={exporting !== null || !hasVehicles} onClick={() => doExport("ba")}>
-              {exporting === "ba" ? "Exporting…" : "Export BA Worksheet"}
-            </Button>
-            <Button variant="outlined" disabled={exporting !== null || !hasIm} onClick={() => doExport("im")}>
-              {exporting === "im" ? "Exporting…" : "Export IM Worksheet"}
-            </Button>
-            <Button variant="outlined" disabled={exporting !== null || !(hasVehicles || hasIm || hasDrivers)} onClick={() => doExport("default")}>
-              {exporting === "default" ? "Exporting…" : "Export Default"}
-            </Button>
-            <Button variant="outlined" disabled={exporting !== null || !hasDrivers} onClick={() => doExport("drivers")}>
-              {exporting === "drivers" ? "Exporting…" : "Export Drivers CSV"}
-            </Button>
+            {EXPORT_BUTTONS.map((b) => (
+              <Button
+                key={b.kind}
+                variant="outlined"
+                startIcon={b.icon}
+                disabled={exporting !== null || !b.enabled({ hasVehicles, hasIm, hasDrivers })}
+                onClick={() => doExport(b.kind)}
+                sx={{ maxWidth: 170, lineHeight: 1.2, textAlign: "left", justifyContent: "flex-start" }}
+              >
+                {exporting === b.kind ? "Exporting…" : b.label}
+              </Button>
+            ))}
             {run.source_type === "pdf" ? (
-              <Button variant="text" onClick={() => setShowPdf((v) => !v)}>
+              <Button
+                variant="outlined"
+                startIcon={<VisibilityRoundedIcon />}
+                onClick={() => setShowPdf((v) => !v)}
+                sx={{ maxWidth: 170, lineHeight: 1.2, textAlign: "left", justifyContent: "flex-start" }}
+              >
                 {showPdf ? "Hide PDF" : "View PDF"}
               </Button>
             ) : null}
@@ -407,10 +429,10 @@ export const RunShow = () => {
           <AutoTab run={run} vehicles={vehicles} results={results} canEdit={Boolean(canEdit)} onChanged={refreshAll} onError={err} onRefresh={refreshAll} />
         ) : null}
         {tab === "im" ? (
-          <ImTab run={run} items={imItems} canEdit={Boolean(canEdit)} exportBusy={exporting !== null} onExport={() => doExport("im")} onChanged={refreshAll} editingDisabledReason={validating ? "Editing disabled during validation" : null} />
+          <ImTab items={imItems} exportBusy={exporting !== null} onExport={() => doExport("im")} />
         ) : null}
         {tab === "driver" ? (
-          <DriverTab run={run} drivers={drivers} canEdit={Boolean(canEdit)} canSeeSensitive={canSeeSensitive || isAdmin || isReviewer} exportBusy={exporting !== null} onExport={() => doExport("drivers")} onChanged={refreshAll} onError={err} editingDisabledReason={validating ? "Editing disabled during validation" : null} />
+          <DriverTab run={run} drivers={drivers} canEdit={Boolean(canEdit)} exportBusy={exporting !== null} onExport={() => doExport("drivers")} onChanged={refreshAll} onError={err} />
         ) : null}
         {tab === "riskmeter" || tab === "osha" || tab === "safer" ? (
           <ReportTab run={run} type={tab} canEdit={Boolean(canEdit)} onError={err} />

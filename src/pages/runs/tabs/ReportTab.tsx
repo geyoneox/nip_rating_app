@@ -4,7 +4,9 @@ import { useList } from "@refinedev/core";
 import Alert from "@mui/material/Alert";
 import Button from "@mui/material/Button";
 import Checkbox from "@mui/material/Checkbox";
+import Box from "@mui/material/Box";
 import CircularProgress from "@mui/material/CircularProgress";
+import LinearProgress from "@mui/material/LinearProgress";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
@@ -27,7 +29,7 @@ export const ReportTab = ({ run, type, canEdit, onError }: Props) => {
   const insuredAddress = [run.insured_mailing_address, run.insured_city, run.insured_state, run.insured_zip].filter(Boolean).join(", ");
 
   const [address, setAddress] = useState(insuredAddress);
-  const [reports, setReports] = useState<string[]>([]);
+  const [reports, setReports] = useState<string[]>(RISKMETER_REPORTS.map((r) => r.id));
   const [establishment, setEstablishment] = useState(run.insured_name ?? "");
   const [state, setState] = useState(run.insured_state ?? "");
   const [searchBy, setSearchBy] = useState<"usdot" | "name">("usdot");
@@ -56,6 +58,16 @@ export const ReportTab = ({ run, type, canEdit, onError }: Props) => {
   const fetchedAt = q?.query?.dataUpdatedAt ?? 0;
   useEffect(() => setTick(fetchedAt), [fetchedAt]);
   const processing = report?.status === "processing";
+  // the scraper reports no percentage, so the bar fills over its 10-minute limit and stops at 95%
+  const [now, setNow] = useState(0);
+  useEffect(() => {
+    if (!processing) return undefined;
+    setNow(Date.now());
+    const t = window.setInterval(() => setNow(Date.now()), 2000);
+    return () => window.clearInterval(t);
+  }, [processing]);
+  const startedMs = report?.created_at ? new Date(report.created_at.endsWith("Z") ? report.created_at : `${report.created_at}Z`).getTime() : 0;
+  const progressPct = processing && now && startedMs ? Math.max(3, Math.min(95, Math.round(((now - startedMs) / 600000) * 100))) : 3;
   useEffect(() => {
     setActive(Boolean(processing));
     setKey(`${report?.status}|${report?.updated_at}`);
@@ -140,23 +152,41 @@ export const ReportTab = ({ run, type, canEdit, onError }: Props) => {
       {type === "riskmeter" ? (
         <>
           <Stack direction="row" spacing={1} alignItems="flex-start">
-            <TextField fullWidth size="small" label="Insured / location address" value={address} onChange={(e) => setAddress(e.target.value)} disabled={!canEdit} InputLabelProps={{ shrink: true }} />
-            {canEdit ? <Button variant="outlined" onClick={extract} disabled={extracting}>{extracting ? "Extracting…" : "Extract"}</Button> : null}
+            <TextField
+              fullWidth
+              size="small"
+              label="Insured / location address"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              disabled={!canEdit || processing}
+              helperText="Defaults from the ACORD insured/applicant address when available; edit before running."
+              InputLabelProps={{ shrink: true }}
+            />
+            {canEdit ? <Button variant="outlined" onClick={extract} disabled={extracting || processing}>{extracting ? "Extracting…" : "Extract"}</Button> : null}
           </Stack>
-          <Typography variant="subtitle2">Reports to order</Typography>
-          {RISKMETER_REPORTS.length === 0 ? (
-            <Alert severity="warning">The list of RiskMeter reports has not been configured yet.</Alert>
-          ) : (
-            <Stack>
-              <FormControlLabel
-                control={<Checkbox size="small" disabled={!canEdit} checked={reports.length === RISKMETER_REPORTS.length} indeterminate={reports.length > 0 && reports.length < RISKMETER_REPORTS.length} onChange={(e) => setReports(e.target.checked ? RISKMETER_REPORTS.map((r) => r.id) : [])} />}
-                label="Select all"
-              />
-              {RISKMETER_REPORTS.map((r) => (
-                <FormControlLabel key={r.id} control={<Checkbox size="small" disabled={!canEdit} checked={reports.includes(r.id)} onChange={(e) => setReports(e.target.checked ? [...reports, r.id] : reports.filter((x) => x !== r.id))} />} label={r.label} />
-              ))}
-            </Stack>
-          )}
+          <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+            <div>
+              <Typography variant="subtitle1" fontWeight={600}>Reports to order</Typography>
+              <Typography variant="body2" color="text.secondary">Based on column B of the RiskMeter workbook.</Typography>
+            </div>
+            {canEdit ? (
+              <Stack direction="row" spacing={1}>
+                <Button size="small" variant="outlined" disabled={processing} onClick={() => setReports(RISKMETER_REPORTS.map((r) => r.id))}>Select all</Button>
+                <Button size="small" variant="outlined" disabled={processing} onClick={() => setReports([])}>Clear</Button>
+              </Stack>
+            ) : null}
+          </Stack>
+          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(4, 1fr)" }, gap: 1.5 }}>
+            {RISKMETER_REPORTS.map((r) => (
+              <Box key={r.id} sx={{ border: 1, borderColor: "divider", borderRadius: 1, px: 1 }}>
+                <FormControlLabel
+                  sx={{ m: 0, width: "100%" }}
+                  control={<Checkbox size="small" disabled={!canEdit || processing} checked={reports.includes(r.id)} onChange={(e) => setReports(e.target.checked ? [...reports, r.id] : reports.filter((x) => x !== r.id))} />}
+                  label={r.label}
+                />
+              </Box>
+            ))}
+          </Box>
         </>
       ) : null}
 
@@ -186,17 +216,26 @@ export const ReportTab = ({ run, type, canEdit, onError }: Props) => {
         </Stack>
       ) : null}
 
-      <Stack direction="row" spacing={1} alignItems="center">
+      {processing ? (
+        <Alert severity="info" icon={<CircularProgress size={18} />}>
+          <Typography variant="body2" sx={{ mb: 1 }}>
+            {TITLES[type]} report is running in a background browser. This view refreshes automatically.
+          </Typography>
+          <LinearProgress variant="determinate" value={progressPct} />
+        </Alert>
+      ) : null}
+
+      <Stack direction="row" spacing={1} alignItems="center" justifyContent="flex-end">
         {canEdit ? (
-          <Button variant="contained" onClick={run_} disabled={busy || processing || (type === "riskmeter" && RISKMETER_REPORTS.length === 0)}>
-            {type === "riskmeter" ? "Run RiskMeter" : type === "osha" ? "Run & Download OSHA Report" : "Run & Download SAFER Report"}
+          <Button variant="contained" onClick={run_} disabled={busy || processing}>
+            {processing
+              ? `Running ${TITLES[type]}…`
+              : type === "riskmeter"
+                ? "Run RiskMeter"
+                : type === "osha"
+                  ? "Run & Download OSHA Report"
+                  : "Run & Download SAFER Report"}
           </Button>
-        ) : null}
-        {processing ? (
-          <Stack direction="row" spacing={1} alignItems="center">
-            <CircularProgress size={18} />
-            <Typography variant="body2">Report is being generated. This view refreshes automatically.</Typography>
-          </Stack>
         ) : null}
       </Stack>
 

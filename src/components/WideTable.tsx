@@ -24,6 +24,8 @@ export type WideCol<T> = {
   editValue?: (row: T) => string;
   value?: (row: T) => string | number | null | undefined;
   render?: (row: T) => ReactNode;
+  /** Emphasis colour for calculated columns (orange = class code, green = value), as in the reference app. */
+  tone?: "warning" | "success";
 };
 
 export type Selection<T> = {
@@ -192,7 +194,7 @@ export function WideTable<T>({
                 </TableCell>
               ) : null}
               {columns.map((c) => (
-                <TableCell key={c.key} align={c.align} sx={{ minWidth: c.width ?? 120, whiteSpace: "nowrap", fontWeight: 600 }}>
+                <TableCell key={c.key} align={c.align} sx={{ minWidth: c.width ?? 120, whiteSpace: "nowrap", fontWeight: 600, color: c.tone ? `${c.tone}.dark` : undefined }}>
                   {c.label}
                 </TableCell>
               ))}
@@ -246,6 +248,8 @@ export function WideTable<T>({
                             whiteSpace: "nowrap",
                             cursor: editable && !editingDisabledReason ? "text" : "default",
                             bgcolor: edited ? alpha(t.palette.warning.main, 0.16) : undefined,
+                            color: col.tone ? `.dark` : undefined,
+                            fontWeight: col.tone ? 700 : undefined,
                           })}
                         >
                           {isEditing ? (

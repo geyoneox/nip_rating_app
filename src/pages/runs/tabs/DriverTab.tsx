@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useMemo, useState } from "react";
-import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Checkbox from "@mui/material/Checkbox";
@@ -9,23 +8,21 @@ import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { WideTable, type WideCol } from "../../../components/WideTable";
-import { HIDDEN_VALUE, saveEdit, type NipDriver, type NipRun } from "../../../lib/nip";
+import { saveEdit, type NipDriver, type NipRun } from "../../../lib/nip";
 
 type Props = {
   run: NipRun;
   drivers: NipDriver[];
   canEdit: boolean;
-  canSeeSensitive: boolean;
   exportBusy: boolean;
   onExport: () => void;
   onChanged: () => void;
   onError: (m: string) => void;
-  editingDisabledReason?: string | null;
 };
 
-const isEdited = (r: NipDriver, key: string) => Boolean(r.edited_fields && r.edited_fields[key]);
 
-export const DriverTab = ({ run, drivers, canEdit, canSeeSensitive, exportBusy, onExport, onChanged, onError, editingDisabledReason }: Props) => {
+
+export const DriverTab = ({ run, drivers, canEdit, exportBusy, onExport, onChanged, onError }: Props) => {
   const [hideDup, setHideDup] = useState(true);
   const [meta, setMeta] = useState({ epic_id: run.epic_id ?? "", policy_number: run.policy_number ?? "", broker_email: run.broker_email ?? "" });
   const [savingMeta, setSavingMeta] = useState(false);
@@ -51,32 +48,25 @@ export const DriverTab = ({ run, drivers, canEdit, canSeeSensitive, exportBusy, 
     }
   };
 
-  const onSave = async (row: NipDriver, col: WideCol<NipDriver>, value: string) => {
-    await saveEdit(run.id, "driver", row.id, { [col.key]: value.trim() === "" ? null : value.trim() });
-    onChanged();
-  };
-
-  const mask = (v: string) => (canSeeSensitive ? v : v ? HIDDEN_VALUE : "");
 
   const cols: WideCol<NipDriver>[] = [
-    { key: "first_name", label: "First name", width: 140, editable: canSeeSensitive, value: (r) => mask(r.first_name ?? "") },
-    { key: "middle_name", label: "Middle name", width: 130, editable: canSeeSensitive, value: (r) => mask(r.middle_name ?? "") },
-    { key: "last_name", label: "Last name", width: 150, editable: canSeeSensitive, value: (r) => mask(r.last_name ?? "") },
+    { key: "first_name", label: "First name", width: 140, value: (r) => r.first_name ?? "" },
+    { key: "middle_name", label: "Middle name", width: 130, value: (r) => r.middle_name ?? "" },
+    { key: "last_name", label: "Last name", width: 150, value: (r) => r.last_name ?? "" },
     {
       key: "date_of_birth",
       label: "Date of birth",
       width: 140,
-      editable: canSeeSensitive,
+     
       editValue: (r) => r.date_of_birth ?? r.date_of_birth_raw ?? "",
-      value: (r) => mask(r.date_of_birth ?? r.date_of_birth_raw ?? ""),
+      value: (r) => r.date_of_birth ?? r.date_of_birth_raw ?? "",
     },
-    { key: "license_state", label: "Licence state", width: 110, editable: true, value: (r) => r.license_state ?? "" },
-    { key: "license_number", label: "Licence number", width: 170, editable: canSeeSensitive, value: (r) => mask(r.license_number ?? "") },
+    { key: "license_state", label: "Licence state", width: 110, value: (r) => r.license_state ?? "" },
+    { key: "license_number", label: "Licence number", width: 170, value: (r) => r.license_number ?? "" },
   ];
 
   return (
     <Stack spacing={2}>
-      {!canSeeSensitive ? <Alert severity="info">Names, dates of birth and licence numbers are hidden for your role.</Alert> : null}
 
       <Stack direction="row" flexWrap="wrap" gap={1.5} alignItems="center">
         <TextField size="small" label="Epic ID" value={meta.epic_id} disabled={!canEdit || savingMeta} onChange={(e) => setMeta({ ...meta, epic_id: e.target.value })} onBlur={() => saveMetaField("epic_id")} InputLabelProps={{ shrink: true }} />
@@ -93,16 +83,9 @@ export const DriverTab = ({ run, drivers, canEdit, canSeeSensitive, exportBusy, 
         columns={cols}
         rows={shown}
         rowId={(r) => r.id}
-        canEdit={canEdit}
-        editingDisabledReason={editingDisabledReason}
-        onSave={onSave}
-        isEdited={(r, c) => isEdited(r, c.key)}
         emptyMessage={<Typography color="text.secondary">No drivers extracted.</Typography>}
         rowSx={(r) => (r.is_duplicate ? { opacity: 0.6 } : undefined)}
       />
-      <Typography variant="caption" color="text.secondary">
-        Driver details are shown only to roles allowed to see them and never appear in the address bar.
-      </Typography>
     </Stack>
   );
 };

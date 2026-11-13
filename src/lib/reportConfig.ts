@@ -1,8 +1,16 @@
 /**
- * RiskMeter report names the user can order.
+ * RiskMeter reports the user can order (column B of the RiskMeter workbook).
  *
- * OPEN: the exact list (and any state rules) has not been supplied yet, so this
- * is intentionally empty. Add entries as { id, label } when the list is known.
- * `id` is sent to the report function exactly as written.
+ * `id` is sent to the report function and on to the scraper exactly as written, and
+ * must match the list in the `nip_report_run` function.
  */
-export const RISKMETER_REPORTS: Array<{ id: string; label: string }> = [];
+export const RISKMETER_REPORTS: Array<{ id: string; label: string }> = [
+  "Crime Risk Score",
+  "Fire Protection Class",
+  "Flash Flood Risk Score",
+  "Flood Risk Score",
+  "Hail Probability",
+  "Wind Probability",
+  "Distance to Shore",
+  "Wildfire Risk Score",
+].map((name) => ({ id: name, label: name }));

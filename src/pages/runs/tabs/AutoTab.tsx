@@ -216,8 +216,8 @@ export const AutoTab = ({ run, vehicles, results, canEdit, onChanged, onError, o
     { key: "pd_year", label: "Year (PD)", width: 90, value: pd((r) => r.pd_year) },
     { key: "pd_vtype", label: "Vehicle Type (PD)", width: 150, value: pd((r) => r.vehicle_type) },
     { key: "pd_vsub", label: "Vehicle Subtype (PD)", width: 160, value: pd((r) => r.vehicle_subtype) },
-    { key: "class_code", label: "Class Code", width: 100, value: (r) => t(r.class_code) },
-    { key: "ocn_value", label: "OCN Value", width: 120, align: "right", value: (r) => fmtMoney(r.ocn_value) },
+    { key: "class_code", label: "Class Code", width: 100, tone: "warning", value: (r) => t(r.class_code) },
+    { key: "ocn_value", label: "OCN Value", width: 120, align: "right", tone: "success", value: (r) => fmtMoney(r.ocn_value) },
   ];
 
   const retryCount = failedRows.length;
