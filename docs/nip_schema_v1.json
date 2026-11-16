@@ -27,7 +27,7 @@
       {
         "name": "ref_ocn_lookup",
         "title": "OCN lookup",
-        "description": "Average cost new and average model year per program and vehicle type.",
+        "description": "Average cost new and average model year per program and vehicle type. Load from docs/reference-data/ref_ocn_lookup.csv, matching program by name to ref_programs. ElectricalPro has no rows for Extra Heavy Trucks, Heavy Truck-Tractors or Manully Rated Veh.",
         "audit_enabled": true,
         "schema": {
           "fields": [
@@ -55,7 +55,7 @@
       {
         "name": "ref_class_codes",
         "title": "Class codes",
-        "description": "Class codes as TEXT to keep leading zeros (07996, 03589, 01489).",
+        "description": "Class codes as TEXT to keep leading zeros (07996, 03589, 01489). Vans use the truck rows. Load from docs/reference-data/ref_class_codes.csv.",
         "audit_enabled": true,
         "schema": {
           "fields": [
@@ -66,8 +66,10 @@
               "truck_up_to_10000", "private_passenger"]}},
             {"name": "standard_code", "type": "string", "constraints": {"required": true}},
             {"name": "special_state_code", "type": "string", "constraints": {"required": true}, "description": "Used for CA, FL, GA, TX"},
-            {"name": "gvw_min", "type": "integer"},
-            {"name": "gvw_max", "type": "integer"},
+            {"name": "dump_standard_code", "type": "string", "constraints": {"required": true}, "description": "Dump vehicle, all states except CA, FL, GA, TX"},
+            {"name": "dump_special_state_code", "type": "string", "constraints": {"required": true}, "description": "Dump vehicle, CA, FL, GA, TX"},
+            {"name": "weight_min", "type": "integer", "description": "GVW for trucks and vans, GCW for tractors. Blank when the category has no weight band"},
+            {"name": "weight_max", "type": "integer", "description": "Blank means no upper limit"},
             {"name": "notes", "type": "string"},
             {"name": "created_at", "type": "datetime", "default": "now()", "constraints": {"required": true}},
             {"name": "updated_at", "type": "datetime", "default": "now()", "constraints": {"required": true}}
@@ -319,33 +321,6 @@
             {"name": "uq_run_row", "fields": ["run_id", "row_number"], "unique": true},
             {"name": "idx_run", "fields": ["run_id"]},
             {"name": "idx_run_license", "fields": ["run_id", "license_number"]}
-          ]
-        }
-      },
-      {
-        "name": "nip_reports",
-        "title": "Reports (RiskMeter, OSHA, SAFER)",
-        "schema": {
-          "fields": [
-            {"name": "id", "type": "string", "format": "uuid", "constraints": {"required": true}},
-            {"name": "run_id", "type": "string", "format": "uuid", "constraints": {"required": true}},
-            {"name": "owner_id", "type": "string", "format": "uuid", "constraints": {"required": true}},
-            {"name": "report_type", "type": "string", "constraints": {"required": true, "enum": ["riskmeter", "osha", "safer"]}},
-            {"name": "parameters", "type": "object", "description": "Address, selected reports, search type. Never passwords."},
-            {"name": "status", "type": "string", "default": "processing", "constraints": {"required": true, "enum": ["processing", "complete", "failed"]}},
-            {"name": "error", "type": "string"},
-            {"name": "file_ref", "type": "string"},
-            {"name": "combined_file_ref", "type": "string"},
-            {"name": "created_at", "type": "datetime", "default": "now()", "constraints": {"required": true}},
-            {"name": "updated_at", "type": "datetime", "default": "now()", "constraints": {"required": true}}
-          ],
-          "primaryKey": ["id"],
-          "foreignKeys": [
-            {"fields": ["run_id"], "reference": {"resource": "nip_runs", "fields": ["id"]}, "x-actions": {"onDelete": "RESTRICT"}}
-          ],
-          "indexes": [
-            {"name": "idx_run", "fields": ["run_id"]},
-            {"name": "idx_run_type", "fields": ["run_id", "report_type"]}
           ]
         }
       },

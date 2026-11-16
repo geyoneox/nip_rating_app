@@ -71,20 +71,22 @@ const TABLES: TableDef[] = [
   {
     resource: "ref_class_codes",
     title: "Class codes",
-    note: "Codes are kept as text so leading zeros stay (for example 03589).",
+    note: "Codes are kept as text so leading zeros stay (for example 03589). Vans use the truck rows. Tractor bands are GCW; truck bands are GVW.",
     fields: [
       { key: "category", label: "Category", kind: "select", options: CATEGORIES, required: true },
       { key: "standard_code", label: "Standard code", kind: "text", required: true, textual: true },
       { key: "special_state_code", label: "Special state code (CA, FL, GA, TX)", kind: "text", required: true, textual: true },
-      { key: "gvw_min", label: "GVW min", kind: "int" },
-      { key: "gvw_max", label: "GVW max", kind: "int" },
+      { key: "dump_standard_code", label: "Dump standard code", kind: "text", required: true, textual: true },
+      { key: "dump_special_state_code", label: "Dump special state code (CA, FL, GA, TX)", kind: "text", required: true, textual: true },
+      { key: "weight_min", label: "Weight min (GVW; GCW for tractors)", kind: "int" },
+      { key: "weight_max", label: "Weight max (blank = no limit)", kind: "int" },
       { key: "notes", label: "Notes", kind: "text" },
     ],
   },
   {
     resource: "ref_rules",
     title: "Rules",
-    note: "At least one of the three value fields must be set.",
+    note: "At least one of the three value fields must be set. Rating keys: dump_sic_codes (text, comma separated, default 79) and deductible_tiers (JSON, limits are inclusive, last tier has no limit, for example [{\"up_to\":50000,\"deductible\":1000},{\"up_to\":100000,\"deductible\":2000},{\"up_to\":null,\"deductible\":5000}]).",
     fields: [
       { key: "rule_key", label: "Rule key", kind: "text", required: true },
       { key: "value_number", label: "Number value", kind: "number" },

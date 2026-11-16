@@ -1,0 +1,12 @@
+category,standard_code,special_state_code,dump_standard_code,dump_special_state_code,weight_min,weight_max,notes
+mobile_equipment,07996,07996,07996,07996,,,No weight band
+semi_trailer,67489,67589,67479,67579,,,No weight band
+utility_trailer,69489,69589,69479,69579,,,No weight band
+trailer,68489,68589,68479,68579,,,No weight band
+tractor_over_45000,50489,50589,50479,50579,45001,,Band is GCW
+tractor_up_to_45000,34489,34589,34479,34579,0,45000,Band is GCW
+truck_45001_plus,40489,40589,40479,40579,45001,,Band is GVW. Also used for vans
+truck_20001_45000,31489,33589,31479,33579,20001,45000,Band is GVW. Also used for vans
+truck_10001_20000,21489,23589,21479,23579,10001,20000,Band is GVW. Also used for vans
+truck_up_to_10000,01489,03589,01479,03579,0,10000,Band is GVW. Also used for vans
+private_passenger,7398,7398,7398,7398,,,No weight band. Four digits on purpose

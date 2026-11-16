@@ -16,15 +16,15 @@ In policy `roles[]` use the bare names `nip_user`, `nip_reviewer`, `nip_admin`, 
 
 | Role | Allowed (ceiling) |
 |---|---|
-| nip_user | `datatable:ref_*` read; `datatable:nip_*` read; `storage:nip-uploads` read, create, delete; `storage:nip-exports` read; `storage:nip-reports` read; `function:nip_*` execute |
-| nip_reviewer | `datatable:ref_*` read; `datatable:nip_*` read; `storage:nip-uploads`, `nip-exports`, `nip-reports` read; `function:nip_export_*` execute; `query:nip_*` execute |
+| nip_user | `datatable:ref_*` read; `datatable:nip_*` read; `storage:nip-uploads` read, create, delete; `storage:nip-exports` read; `function:nip_*` execute |
+| nip_reviewer | `datatable:ref_*` read; `datatable:nip_*` read; `storage:nip-uploads`, `nip-exports` read; `function:nip_export_*` execute; `query:nip_*` execute |
 | nip_admin | `datatable:ref_*` and `datatable:nip_*` read, create, update, delete; `storage:nip-*` read, create, update, delete; `function:nip_*` execute; `query:nip_*` execute |
 
 To verify when applied: that wildcard resource names are accepted in role policies, and how a role policy combines with a resource policy condition (test T20).
 
 ## 2. Resource policies
 
-### 2a. Run data: nip_runs, nip_vehicles, nip_validation_results, nip_im_items, nip_drivers, nip_reports
+### 2a. Run data: nip_runs, nip_vehicles, nip_validation_results, nip_im_items, nip_drivers
 
 ```json
 {"apiVersion":"api.cerbos.dev/v1","resourcePolicy":{"resource":"datatable:<table>","version":"default","rules":[
@@ -64,12 +64,11 @@ nip_user and nip_reviewer have no create, update or delete on these tables. See 
 |---|---|---|---|
 | nip-uploads | read, create, delete where path starts with own user id | read all | all actions |
 | nip-exports | read where path starts with own user id | read all | all actions |
-| nip-reports | read where path starts with own user id | read all | all actions |
 | nip-templates | none | none | all actions |
 
-Functions write to exports, reports and templates reads with their own access (to verify, T19).
+Functions write to exports and templates reads with their own access (to verify, T19).
 
-Open point (T14 / T20): whether `storage:` policy conditions can see the object path. If not, ownership of files is enforced by a function (`nip_get_download`) and users get no direct read on the three buckets.
+Open point (T14 / T20): whether `storage:` policy conditions can see the object path. If not, ownership of files is enforced by a function (`nip_get_download`) and users get no direct read on the two buckets.
 
 ### 2e. Functions
 
@@ -80,10 +79,8 @@ Each function policy replaces the automatic `roles: ["*"]` rule.
 | nip_create_run (proposed) | nip_user, nip_admin | owner_id forced to caller; file_ref must start with caller id |
 | nip_save_edits (proposed) | nip_user, nip_admin | run owner or nip_admin; rejects owner_id, calculated and status fields; writes edited_fields and updated_at |
 | nip_extract_run (retry call) | nip_user, nip_admin | run owner or nip_admin |
-| nip_extract_address | nip_user, nip_admin | run owner or nip_admin |
 | nip_validate_start | nip_user, nip_admin | run owner or nip_admin |
 | nip_validate_cancel | nip_user, nip_admin | run owner or nip_admin |
-| nip_report_run | nip_user, nip_admin | run owner or nip_admin |
 | nip_delete_run | nip_user, nip_admin | run owner or nip_admin |
 | nip_export_ba, nip_export_im, nip_export_drivers, nip_export_default | nip_user, nip_reviewer, nip_admin | run owner, nip_reviewer or nip_admin |
 | nip_recompute_rating | no app role | event or internal call only |

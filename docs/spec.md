@@ -42,20 +42,20 @@ A recommendation will be added after 1a is known. The `nip_scraper_callback` web
 | Role | Access |
 |---|---|
 | `nip_user` | Full working access to own runs (owner_id = user id). Read-only on reference data. |
-| `nip_reviewer` | Read and export all runs. No edit, validate, report or delete on others' runs. |
+| `nip_reviewer` | Read and export all runs. No edit, validate or delete on others' runs. |
 | `nip_admin` | Everything, plus reference data, templates, usage reports. |
 
 Cerbos policies check `owner_id` directly on every table. Child rows carry a denormalized `owner_id` set by the creating function, never by the frontend.
 
 ## 4. Buckets
 
-`nip-uploads`, `nip-templates` (admin only), `nip-exports`, `nip-reports`. All private. Object paths start with the run id so that policy can follow `owner_id`.
+`nip-uploads`, `nip-templates` (admin only), `nip-exports`. All private. Object paths start with the run id so that policy can follow `owner_id`.
 
 ## 5. Tables (planned; not created)
 
-Reference: `ref_programs`, `ref_ocn_lookup`, `ref_class_codes`, `ref_rules` (also holds the stall timeouts: extraction 30 min, validation 35 min, reports 20 min).
+Reference: `ref_programs`, `ref_ocn_lookup`, `ref_class_codes`, `ref_rules` (also holds the stall timeouts: extraction 30 min, validation 35 min).
 
-Run data: `nip_runs`, `nip_vehicles`, `nip_validation_results`, `nip_im_items`, `nip_drivers`, `nip_reports`, `nip_exports`.
+Run data: `nip_runs`, `nip_vehicles`, `nip_validation_results`, `nip_im_items`, `nip_drivers`, `nip_exports`.
 
 Common to run and child tables: `owner_id`, `run_id` (children), `created_at`, `updated_at`. `nip_runs` also has `status` (including `deleting`), `last_progress_at`, `program_name`, and the Insured fields.
 
@@ -78,14 +78,12 @@ PII: licence number and date of birth never go to function logs or error message
 | Function | Mode | Trigger | Notes |
 |---|---|---|---|
 | `nip_extract_run` | async | `RECORD_CREATE` on `nip_runs`; also callable for retry | Gemini `gemini-2.5-flash` via REST. Model name in config. Key in `GEMINI_API_KEY`. |
-| `nip_extract_address` | sync | API | |
 | `nip_validate_start` | sync | API | Applies skip rules (blank/placeholder, trailers, invalid, duplicate VINs) |
 | `nip_validate_worker` | async | started by `nip_validate_start` | Calls `nip_recompute_rating` explicitly after saving results |
 | `nip_validate_cancel` | sync | API | Calls scraper cancel |
-| `nip_recompute_rating` | sync/async | filtered `RECORD_UPDATE` on `nip_vehicles` and callable | Watches input fields only; skips write if nothing changed |
+| `nip_recompute_rating` | sync/async | filtered `RECORD_UPDATE` on `nip_vehicles` and callable | Written: `docs/functions/nip_recompute_rating.py`. Rules in `docs/rating-rules.md`. Watches input fields only (body_type, model, make, year, cost_new, comp_otc, coll, sic, garaging_state); writes one row at a time and skips the write if nothing changed. Params: `run_id`, optional `vehicle_ids`. Deployed 2026-11-16. No event trigger: `nip_save_edits` calls it directly after an edit to a rating input, and `nip_validate_worker` calls it after validation. |
 | `nip_export_ba`, `nip_export_im` | sync/async | API | Template fidelity gated by the template spike |
 | `nip_export_drivers`, `nip_export_default` | sync | API | |
-| `nip_report_run` | async | API | RiskMeter, OSHA, SAFER via scraper |
 | `nip_delete_run` | async | API | Resumable: set `deleting`, remove children and files, delete run last |
 | `nip_reconcile_runs` | sync | schedule every 10 min | Uses `last_progress_at` and `ref_rules` timeouts |
 | `nip_scraper_callback` | public webhook | OPEN | Not built until section 2 is decided |
@@ -94,14 +92,14 @@ Events do not fire for upserts or bulk/filtered deletes. Anything that must fire
 
 ## 7. Secrets (names; values entered by the product owner)
 
-`GEMINI_API_KEY`, `SCRAPER_URL`, `SCRAPER_TOKEN`, `PRICEDIGEST_USERNAME`, `PRICEDIGEST_PASSWORD`, `PRICEDIGEST_LOGIN_URL`, `RISKMETER_USERNAME`, `RISKMETER_PASSWORD`, `RISKMETER_LOGIN_URL`.
+`GEMINI_API_KEY`, `SCRAPER_URL`, `SCRAPER_TOKEN`, `PRICEDIGEST_USERNAME`, `PRICEDIGEST_PASSWORD`, `PRICEDIGEST_LOGIN_URL`.
 
 The scraper currently has no auth. It must be changed to check `SCRAPER_TOKEN`. That work is outside Taruvi and outside this repo.
 
 ## 8. Frontend pages
 
 - Runs list (own runs; all runs for reviewer/admin), upload modal.
-- Run detail with tabs AUTO, IM, DRIVER, RiskMeter, OSHA, SAFER. Header: Program Name, export buttons, status banner polling the run row (2 s backing off to 15 s).
+- Run detail with tabs AUTO, IM, DRIVER. Header: Program Name, export buttons, status banner polling the run row (2 s backing off to 15 s).
 - Admin: reference data editor, usage reports.
 - Resources register in `src/App.tsx` with `name` equal to the table name. Users come only through the `user` provider.
 
@@ -115,7 +113,7 @@ The scraper currently has no auth. It must be changed to check `SCRAPER_TOKEN`. 
 6. Cerbos policies and buckets.
 7. Role tests with one real test user per role (`qa_<role>_<date>`).
 8. Secrets.
-9. Functions in this order: recompute, extract, validation, exports, reports/delete/reconcile.
+9. Functions in this order: recompute, extract, validation, exports, delete/reconcile.
 10. Frontend.
 
 ## 10. Open items
@@ -126,5 +124,6 @@ The scraper currently has no auth. It must be changed to check `SCRAPER_TOKEN`. 
 - Whether PDF text extraction libraries are available, or whether Gemini file upload handles PDFs fully.
 - Audit log masking for licence number and date of birth.
 - Data-handling terms for sending real files to Gemini. Use synthetic files only until compliance confirms.
-- Class code table, OCN rules, deductible rules, program details, BA/IM cell mappings (coming from the product owner).
+- Program details and BA/IM cell mappings (coming from the product owner).
+- Class code table, OCN lookup, vehicle type detection and the 20 worked examples were received. See `docs/rating-rules.md` and `docs/reference-data/`. Checked against the old code: the dump rule, the deductible cut-offs and the Treepro calculator rule. Still open: the BODY_TYPE keyword fallback for the OCN vehicle type, whether SIC can be longer than two digits, the "utility" fix (try one real SUV), and the OCN workbook comparison.
 - Callback webhook: decide after section 2.

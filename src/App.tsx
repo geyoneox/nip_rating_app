@@ -36,6 +36,7 @@ import FolderOpenRoundedIcon from "@mui/icons-material/FolderOpenRounded";
 import AssessmentRoundedIcon from "@mui/icons-material/AssessmentRounded";
 import AdminPanelSettingsRoundedIcon from "@mui/icons-material/AdminPanelSettingsRounded";
 import { useNavkitProfileMenuItems } from "./navkit/useNavkitProfileMenuItems";
+import { taruviTokens } from "./theme/themeOptions";
 
 const AppContent = () => {
   const { setMode } = useContext(ColorModeContext);
@@ -169,8 +170,8 @@ function App() {
             <GlobalStyles
               styles={{
                 html: { WebkitFontSmoothing: 'antialiased' },
-                body: { fontFamily: "'Open Sans', sans-serif" },
-                'h1, h2, h3, h4, h5, h6': { fontFamily: "'Quicksand', sans-serif" },
+                body: { fontFamily: taruviTokens.font.body },
+                'h1, h2, h3, h4, h5, h6': { fontFamily: taruviTokens.font.title },
                 '*::-webkit-scrollbar': { width: 8, height: 8 },
                 '*::-webkit-scrollbar-track': { background: 'transparent' },
                 '*::-webkit-scrollbar-thumb': {

@@ -29,6 +29,7 @@ import {
 import { MenuItem } from "./MenuItem";
 import { MobileBottomNav } from "./MobileBottomNav";
 import { useNipAccess } from "../../lib/useNipAccess";
+import { taruviTokens } from "../../theme/themeOptions";
 import "./sidenav.css";
 
 const DRAWER_WIDTH_EXPANDED = 240;
@@ -221,11 +222,38 @@ export const MuiSidenav: React.FC<MuiSidenavProps> = ({ meta }) => {
             height: "calc(100vh - var(--nav-height, 60px))",
             width: drawerWidth,
             boxSizing: "border-box",
-            borderRight: 1,
-            borderColor: "divider",
+            borderRight: 0,
+            backgroundImage: taruviTokens.gradient.sidebar,
+            backgroundColor: taruviTokens.primary.dark,
+            color: "#fff",
             transition: "width 0.2s ease-in-out",
             overflowX: "hidden",
             zIndex: 1200,
+          },
+          // Dark navy sidebar: light text and icons, a gradient pill on the active item.
+          "& .MuiDivider-root": { borderColor: "rgba(255,255,255,0.14)" },
+          "& .MuiIconButton-root": { color: "#fff", "&:hover": { backgroundColor: "rgba(255,255,255,0.12)" } },
+          "& .MuiListItemButton-root": {
+            color: "rgba(255,255,255,0.86)",
+            "&:hover": { backgroundColor: "rgba(255,255,255,0.12)" },
+            "& .MuiListItemIcon-root": { color: "inherit" },
+            "& .MuiSvgIcon-root": { fontSize: 26 },
+            "&.Mui-selected": {
+              backgroundColor: "transparent",
+              backgroundImage: taruviTokens.gradient.sidebarActive,
+              color: "#fff",
+              boxShadow: "0 6px 16px rgba(0,0,0,0.30)",
+              "&:hover": { backgroundImage: taruviTokens.gradient.sidebarActive, filter: "brightness(1.08)" },
+            },
+          },
+          "& .MuiListItemText-primary": { fontFamily: taruviTokens.font.title },
+          "& .MuiOutlinedInput-root": {
+            color: "#fff",
+            backgroundColor: "rgba(255,255,255,0.10)",
+            "& .MuiOutlinedInput-notchedOutline": { borderColor: "rgba(255,255,255,0.30)" },
+            "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "rgba(255,255,255,0.55)" },
+            "& .MuiSvgIcon-root": { color: "rgba(255,255,255,0.85)" },
+            "& input::placeholder": { color: "rgba(255,255,255,0.75)", opacity: 1 },
           },
         }}
       >

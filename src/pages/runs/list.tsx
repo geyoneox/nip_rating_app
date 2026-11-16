@@ -1,10 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useMemo, useState } from "react";
-import { useMany, useNotification } from "@refinedev/core";
+import { useList, useMany, useNotification } from "@refinedev/core";
 import { useDataGrid } from "@refinedev/mui";
 import { DataGrid, type GridColDef } from "@mui/x-data-grid";
 import { useNavigate } from "react-router";
 import Alert from "@mui/material/Alert";
+import Avatar from "@mui/material/Avatar";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
@@ -23,23 +24,71 @@ import TextField from "@mui/material/TextField";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
+import AutorenewRoundedIcon from "@mui/icons-material/AutorenewRounded";
 import ClearRoundedIcon from "@mui/icons-material/ClearRounded";
+import DirectionsCarRoundedIcon from "@mui/icons-material/DirectionsCarRounded";
+import ErrorRoundedIcon from "@mui/icons-material/ErrorRounded";
+import FactCheckRoundedIcon from "@mui/icons-material/FactCheckRounded";
+import ListAltRoundedIcon from "@mui/icons-material/ListAltRounded";
+import PictureAsPdfRoundedIcon from "@mui/icons-material/PictureAsPdfRounded";
+import SearchOffRoundedIcon from "@mui/icons-material/SearchOffRounded";
+import TableChartRoundedIcon from "@mui/icons-material/TableChartRounded";
+import TaskAltRoundedIcon from "@mui/icons-material/TaskAltRounded";
+import VerifiedRoundedIcon from "@mui/icons-material/VerifiedRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import FilterAltRoundedIcon from "@mui/icons-material/FilterAltRounded";
 import FolderOpenRoundedIcon from "@mui/icons-material/FolderOpenRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
-import { ListPageShell, PagerBar } from "../../components";
+import { ListPageShell, PagerBar, StatCard, StatusChip } from "../../components";
 import { NewValidationModal } from "./NewValidationModal";
-import { FN, STATUS_FILTERS, callFn, fmtDate, runStatus, statusToFilters, type NipRun } from "../../lib/nip";
+import { FN, STATUS_FILTERS, callFn, fmtDate, pickTotal, statusToFilters, type NipRun } from "../../lib/nip";
 import { useNipAccess } from "../../lib/useNipAccess";
 
 const PAGE_SIZES = [10, 25, 50, 100];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+// Stable filter arrays, so the stat-card queries keep one query key each.
+const ACTIVE = { field: "lifecycle_status", operator: "eq", value: "active" };
+const STAT_FILTERS: Record<string, any[]> = {
+  total: [ACTIVE],
+  extracted: [ACTIVE, ...statusToFilters("Extracted")],
+  validating: [ACTIVE, ...statusToFilters("Validating")],
+  validated: [ACTIVE, ...statusToFilters("Validated")],
+  failed: [ACTIVE, ...statusToFilters("Failed")],
+};
+
+/** Live count for one stat card: a one-row server query that only reads the total. */
+const useRunCount = (key: keyof typeof STAT_FILTERS): number | undefined => {
+  const q: any = useList({
+    resource: "nip_runs",
+    filters: STAT_FILTERS[key],
+    pagination: { currentPage: 1, pageSize: 1 },
+    queryOptions: { retry: false },
+  } as any);
+  if (q?.query?.isError) return 0;
+  if (q?.query?.isLoading) return undefined;
+  return pickTotal(q);
+};
+
+const initials = (name: string) =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase())
+    .join("");
+
 export const RunsList = () => {
   const navigate = useNavigate();
   const { open: notify } = useNotification();
   const { userId, identity, isAdmin, isReviewer, canEditRun } = useNipAccess();
+  const counts = {
+    total: useRunCount("total"),
+    extracted: useRunCount("extracted"),
+    validating: useRunCount("validating"),
+    validated: useRunCount("validated"),
+    failed: useRunCount("failed"),
+  };
   const canCreate = !isReviewer || isAdmin; // reviewers cannot upload
 
   const [searchInput, setSearchInput] = useState("");
@@ -150,7 +199,12 @@ export const RunsList = () => {
         sortable: false,
         align: "right",
         headerAlign: "right",
-        valueGetter: (_v, row) => (row.queue_diagnostics?.totalRows != null ? row.queue_diagnostics.totalRows : "—"),
+        renderCell: ({ row }) =>
+          row.queue_diagnostics?.totalRows != null ? (
+            <Chip size="small" variant="outlined" color="primary" icon={<DirectionsCarRoundedIcon />} label={row.queue_diagnostics.totalRows} />
+          ) : (
+            "—"
+          ),
       },
       {
         field: "file_name",
@@ -158,14 +212,23 @@ export const RunsList = () => {
         flex: 1.6,
         minWidth: 280,
         renderCell: ({ row }) => (
-          <Box sx={{ minWidth: 0, py: 0.5 }}>
-            <Link component="button" underline="hover" sx={{ textAlign: "left" }} onClick={() => navigate(`/runs/show/${row.id}`)}>
-              {row.file_name}
-            </Link>
-            <Typography variant="caption" color="text.secondary" component="div" sx={{ overflowWrap: "anywhere" }}>
-              {row.file_ref}
-            </Typography>
-          </Box>
+          <Stack direction="row" alignItems="center" gap={1.5} sx={{ minWidth: 0, py: 0.5 }}>
+            <Avatar
+              variant="rounded"
+              aria-hidden="true"
+              sx={{ bgcolor: row.source_type === "pdf" ? "error.main" : "success.main", color: "#fff", width: 36, height: 36 }}
+            >
+              {row.source_type === "pdf" ? <PictureAsPdfRoundedIcon fontSize="small" /> : <TableChartRoundedIcon fontSize="small" />}
+            </Avatar>
+            <Box sx={{ minWidth: 0 }}>
+              <Link component="button" underline="hover" sx={{ textAlign: "left", fontWeight: 700 }} onClick={() => navigate(`/runs/show/${row.id}`)}>
+                {row.file_name}
+              </Link>
+              <Typography variant="caption" color="text.secondary" component="div" sx={{ overflowWrap: "anywhere" }}>
+                {row.file_ref}
+              </Typography>
+            </Box>
+          </Stack>
         ),
       },
       {
@@ -173,10 +236,7 @@ export const RunsList = () => {
         headerName: "Status",
         width: 130,
         sortable: false,
-        renderCell: ({ row }) => {
-          const s = runStatus(row);
-          return <Chip size="small" label={s.label} color={s.color} variant={s.color === "default" ? "outlined" : "filled"} />;
-        },
+        renderCell: ({ row }) => <StatusChip run={row} />,
       },
       {
         field: "id",
@@ -195,7 +255,21 @@ export const RunsList = () => {
         headerName: "Processed by",
         width: 180,
         sortable: false,
-        valueGetter: (_v, row) => ownerName(row.owner_id),
+        renderCell: ({ row }) => {
+          const name = ownerName(row.owner_id);
+          return name ? (
+            <Stack direction="row" alignItems="center" gap={1} sx={{ minWidth: 0 }}>
+              <Avatar aria-hidden="true" sx={{ bgcolor: "secondary.main", color: "#fff", width: 28, height: 28, fontSize: 12 }}>
+                {initials(name)}
+              </Avatar>
+              <Box component="span" sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {name}
+              </Box>
+            </Stack>
+          ) : (
+            "—"
+          );
+        },
       },
       {
         field: "actions",
@@ -230,6 +304,16 @@ export const RunsList = () => {
     <ListPageShell
       title="VIN Validation - Runs"
       subtitle="Upload PDFs, extract VIN tables, and validate results."
+      icon={<FactCheckRoundedIcon />}
+      stats={
+        <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", lg: "repeat(5, 1fr)" } }}>
+          <StatCard icon={<ListAltRoundedIcon />} label="All runs" tone="primary" value={counts.total} selected={status === "All Status"} onClick={() => setStatus("All Status")} />
+          <StatCard icon={<TaskAltRoundedIcon />} label="Ready to validate" tone="secondary" value={counts.extracted} selected={status === "Extracted"} onClick={() => setStatus("Extracted")} />
+          <StatCard icon={<AutorenewRoundedIcon />} label="Validating" tone="warning" value={counts.validating} selected={status === "Validating"} onClick={() => setStatus("Validating")} />
+          <StatCard icon={<VerifiedRoundedIcon />} label="Validated" tone="success" value={counts.validated} selected={status === "Validated"} onClick={() => setStatus("Validated")} />
+          <StatCard icon={<ErrorRoundedIcon />} label="Failed" tone="error" value={counts.failed} selected={status === "Failed"} onClick={() => setStatus("Failed")} />
+        </Box>
+      }
       headerAction={
         canCreate ? (
           <Button variant="contained" startIcon={<AddRoundedIcon />} onClick={() => setNewOpen(true)}>
@@ -365,8 +449,11 @@ export const RunsList = () => {
         sx={{ "& .MuiDataGrid-cell": { py: 1, display: "flex", alignItems: "center" }, "& .MuiDataGrid-row": { cursor: "pointer" } }}
         slots={{
           noRowsOverlay: () => (
-            <Stack height="100%" alignItems="center" justifyContent="center" spacing={1} sx={{ p: 4 }}>
-              <Typography variant="subtitle1">{filtersActive ? "No runs match your filters" : "No runs yet"}</Typography>
+            <Stack height="100%" alignItems="center" justifyContent="center" spacing={1} sx={{ p: 4 }} role="status">
+              <Avatar aria-hidden="true" sx={{ width: 72, height: 72, bgcolor: "primary.main", color: "#fff", mb: 1 }}>
+                {filtersActive ? <SearchOffRoundedIcon sx={{ fontSize: 38 }} /> : <FolderOpenRoundedIcon sx={{ fontSize: 38 }} />}
+              </Avatar>
+              <Typography variant="h5" component="p">{filtersActive ? "No runs match your filters" : "No runs yet"}</Typography>
               <Typography variant="body2" color="text.secondary">
                 {filtersActive
                   ? "Try a different search, status or date range."

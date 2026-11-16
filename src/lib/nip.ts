@@ -9,7 +9,6 @@ export const BUCKETS = {
   uploads: "nip-uploads",
   templates: "nip-templates",
   exports: "nip-exports",
-  reports: "nip-reports",
 } as const;
 
 export const FN = {
@@ -17,7 +16,6 @@ export const FN = {
   saveEdits: "nip_save_edits",
   deleteRun: "nip_delete_run",
   extractRun: "nip_extract_run",
-  extractAddress: "nip_extract_address",
   validateStart: "nip_validate_start",
   validateCancel: "nip_validate_cancel",
   scraperStatus: "nip_scraper_status",
@@ -26,7 +24,6 @@ export const FN = {
   exportIm: "nip_export_im",
   exportDrivers: "nip_export_drivers",
   exportDefault: "nip_export_default",
-  reportRun: "nip_report_run",
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -146,18 +143,6 @@ export type NipDriver = {
   license_number?: string | null;
   is_duplicate?: boolean;
   edited_fields?: Record<string, any> | null;
-};
-
-export type NipReport = {
-  id: string;
-  run_id: string;
-  report_type: "riskmeter" | "osha" | "safer";
-  parameters?: Record<string, any> | null;
-  status: "processing" | "complete" | "failed";
-  error?: string | null;
-  file_ref?: string | null;
-  combined_file_ref?: string | null;
-  updated_at?: string;
 };
 
 // ---------------------------------------------------------------------------

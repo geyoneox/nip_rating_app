@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactElement, type ReactNode } from "react";
 import { useList, useOne } from "@refinedev/core";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import Alert from "@mui/material/Alert";
@@ -12,6 +12,7 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import CircularProgress from "@mui/material/CircularProgress";
+import Paper from "@mui/material/Paper";
 import LinearProgress from "@mui/material/LinearProgress";
 import Stack from "@mui/material/Stack";
 import Tab from "@mui/material/Tab";
@@ -19,16 +20,20 @@ import Tabs from "@mui/material/Tabs";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
-import BarChartRoundedIcon from "@mui/icons-material/BarChartRounded";
-import BuildRoundedIcon from "@mui/icons-material/BuildRounded";
-import DescriptionRoundedIcon from "@mui/icons-material/DescriptionRounded";
+import BadgeRoundedIcon from "@mui/icons-material/BadgeRounded";
+import CalendarMonthRoundedIcon from "@mui/icons-material/CalendarMonthRounded";
+import ConstructionRoundedIcon from "@mui/icons-material/ConstructionRounded";
+import DirectionsCarRoundedIcon from "@mui/icons-material/DirectionsCarRounded";
 import ExpandMoreRoundedIcon from "@mui/icons-material/ExpandMoreRounded";
-import LocalShippingRoundedIcon from "@mui/icons-material/LocalShippingRounded";
+import InventoryRoundedIcon from "@mui/icons-material/InventoryRounded";
+import PictureAsPdfRoundedIcon from "@mui/icons-material/PictureAsPdfRounded";
+import TableChartRoundedIcon from "@mui/icons-material/TableChartRounded";
+import VisibilityOffRoundedIcon from "@mui/icons-material/VisibilityOffRounded";
 import VisibilityRoundedIcon from "@mui/icons-material/VisibilityRounded";
 import { AutoTab } from "./tabs/AutoTab";
 import { ImTab } from "./tabs/ImTab";
 import { DriverTab } from "./tabs/DriverTab";
-import { ReportTab } from "./tabs/ReportTab";
+import { PageHero, StatusChip } from "../../components";
 import { usePollingInterval } from "../../lib/usePollingInterval";
 import { useNipAccess } from "../../lib/useNipAccess";
 import {
@@ -37,8 +42,8 @@ import {
   callFn,
   openExport,
   pickList,
+  fmtDate,
   pickOne,
-  runStatus,
   saveEdit,
   type NipDriver,
   type NipImItem,
@@ -48,9 +53,22 @@ import {
 } from "../../lib/nip";
 import { taruviStorageProvider } from "../../providers/refineProviders";
 
-const TABS = ["auto", "im", "driver", "riskmeter", "osha", "safer"] as const;
+const TABS = ["auto", "im", "driver"] as const;
 type TabKey = (typeof TABS)[number];
-const TAB_LABEL: Record<TabKey, string> = { auto: "AUTO", im: "IM", driver: "DRIVER", riskmeter: "RiskMeter", osha: "OSHA", safer: "SAFER" };
+const TAB_LABEL: Record<TabKey, string> = { auto: "AUTO", im: "IM", driver: "DRIVER" };
+const TAB_ICON: Record<TabKey, ReactElement> = {
+  auto: <DirectionsCarRoundedIcon />,
+  im: <ConstructionRoundedIcon />,
+  driver: <BadgeRoundedIcon />,
+};
+
+// Frosted chips for the gradient header.
+const HERO_CHIP = {
+  bgcolor: "rgba(255,255,255,0.18)",
+  color: "#fff",
+  border: "1px solid rgba(255,255,255,0.4)",
+  "& .MuiChip-icon": { color: "#fff" },
+} as const;
 
 type ExportKind = "ba" | "im" | "drivers" | "default";
 const EXPORT_BUTTONS: Array<{
@@ -59,10 +77,10 @@ const EXPORT_BUTTONS: Array<{
   icon: ReactNode;
   enabled: (c: { hasVehicles: boolean; hasIm: boolean; hasDrivers: boolean }) => boolean;
 }> = [
-  { kind: "ba", label: "Export BA Worksheet", icon: <BarChartRoundedIcon />, enabled: (c) => c.hasVehicles },
-  { kind: "im", label: "Export IM Worksheet", icon: <BuildRoundedIcon />, enabled: (c) => c.hasIm },
-  { kind: "default", label: "Export Default", icon: <DescriptionRoundedIcon />, enabled: (c) => c.hasVehicles || c.hasIm || c.hasDrivers },
-  { kind: "drivers", label: "Export Drivers CSV", icon: <LocalShippingRoundedIcon />, enabled: (c) => c.hasDrivers },
+  { kind: "ba", label: "Export BA Worksheet", icon: <DirectionsCarRoundedIcon />, enabled: (c) => c.hasVehicles },
+  { kind: "im", label: "Export IM Worksheet", icon: <ConstructionRoundedIcon />, enabled: (c) => c.hasIm },
+  { kind: "default", label: "Export Default", icon: <InventoryRoundedIcon />, enabled: (c) => c.hasVehicles || c.hasIm || c.hasDrivers },
+  { kind: "drivers", label: "Export Drivers CSV", icon: <BadgeRoundedIcon />, enabled: (c) => c.hasDrivers },
 ];
 const ALL = { pagination: { mode: "off" as const } };
 const BATCH_SIZE = 50; // VINs sent to the scraper per request
@@ -211,6 +229,13 @@ export const RunShow = () => {
   const nothingExtracted = run?.extraction_status === "complete" && vehicles.length + imItems.length + drivers.length === 0;
   const progressPct = (p?: { processed: number; total: number } | null) => (p && p.total > 0 ? Math.min(100, Math.round((p.processed / p.total) * 100)) : 0);
   const program = useMemo(() => programs.find((p) => p.id === run?.program_id) ?? null, [programs, run?.program_id]);
+  // "12 vehicles" once loaded; just the noun while the query is still running
+  const count = (q: any, n: number, noun: string) => (q?.query?.isLoading ? noun : `${n} ${noun}`);
+  const tabCount: Record<TabKey, number | null> = {
+    auto: vehiclesQ?.query?.isLoading ? null : vehicles.length,
+    im: imQ?.query?.isLoading ? null : imItems.length,
+    driver: driversQ?.query?.isLoading ? null : drivers.length,
+  };
 
   if (runQ?.query?.isLoading) {
     return (
@@ -238,7 +263,6 @@ export const RunShow = () => {
     );
   }
 
-  const status = runStatus(run);
   const hasVehicles = vehicles.filter((v) => !v.is_duplicate).length > 0;
   const hasIm = imItems.filter((i) => !i.is_small_tool && !i.is_duplicate).length + imItems.filter((i) => i.is_small_tool).length > 0;
   const hasDrivers = drivers.filter((d) => !d.is_duplicate).length > 0;
@@ -246,24 +270,38 @@ export const RunShow = () => {
   return (
     <Box sx={{ p: { xs: 2, md: 3 } }}>
       <Stack spacing={2}>
-        <Box>
-          <Button startIcon={<ArrowBackRoundedIcon />} onClick={() => navigate("/runs")} sx={{ mb: 1 }}>
-            Back to Runs
-          </Button>
+        <PageHero
+          icon={run.source_type === "pdf" ? <PictureAsPdfRoundedIcon /> : <TableChartRoundedIcon />}
+          title={run.file_name}
+          subtitle={`VIN Validation extraction details${run.insured_name ? ` · ${run.insured_name}` : ""}`}
+          eyebrow={
+            <Button startIcon={<ArrowBackRoundedIcon />} onClick={() => navigate("/runs")}>
+              Back to Runs
+            </Button>
+          }
+          meta={
+            <>
+              <StatusChip run={run} onDark />
+              <Chip size="small" icon={<DirectionsCarRoundedIcon />} label={count(vehiclesQ, vehicles.length, "vehicles")} sx={HERO_CHIP} />
+              <Chip size="small" icon={<ConstructionRoundedIcon />} label={count(imQ, imItems.length, "IM items")} sx={HERO_CHIP} />
+              <Chip size="small" icon={<BadgeRoundedIcon />} label={count(driversQ, drivers.length, "drivers")} sx={HERO_CHIP} />
+              <Chip size="small" icon={<CalendarMonthRoundedIcon />} label={fmtDate(run.created_at)} sx={{ ...HERO_CHIP, textTransform: "none" }} />
+            </>
+          }
+          actions={
+            run.source_type === "pdf" ? (
+              <Button variant="outlined" startIcon={showPdf ? <VisibilityOffRoundedIcon /> : <VisibilityRoundedIcon />} onClick={() => setShowPdf((v) => !v)}>
+                {showPdf ? "Hide PDF" : "View PDF"}
+              </Button>
+            ) : null
+          }
+        />
+
+        <Paper sx={{ p: 2, border: 1, borderColor: "divider" }}>
           <Stack direction="row" flexWrap="wrap" gap={1.5} alignItems="center">
-            <Box sx={{ minWidth: 0 }}>
-              <Typography variant="h2" component="h1" noWrap title={run.file_name}>
-                {run.file_name}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                VIN Validation extraction details{run.insured_name ? ` · ${run.insured_name}` : ""}
-              </Typography>
-            </Box>
-            <Chip size="small" label={status.label} color={status.color} variant={status.color === "default" ? "outlined" : "filled"} />
-            <Box sx={{ flexGrow: 1 }} />
             <Autocomplete
               size="small"
-              sx={{ width: 260 }}
+              sx={{ width: { xs: "100%", sm: 280 } }}
               options={programs}
               value={program}
               disabled={!canEdit || validating || extracting}
@@ -273,6 +311,7 @@ export const RunShow = () => {
               renderInput={(p) => <TextField {...p} label="Program Name" placeholder="Select program..." InputLabelProps={{ shrink: true }} />}
               noOptionsText="No programs available"
             />
+            <Box sx={{ flexGrow: 1 }} />
             {EXPORT_BUTTONS.map((b) => (
               <Button
                 key={b.kind}
@@ -280,23 +319,12 @@ export const RunShow = () => {
                 startIcon={b.icon}
                 disabled={exporting !== null || !b.enabled({ hasVehicles, hasIm, hasDrivers })}
                 onClick={() => doExport(b.kind)}
-                sx={{ maxWidth: 170, lineHeight: 1.2, textAlign: "left", justifyContent: "flex-start" }}
               >
                 {exporting === b.kind ? "Exporting…" : b.label}
               </Button>
             ))}
-            {run.source_type === "pdf" ? (
-              <Button
-                variant="outlined"
-                startIcon={<VisibilityRoundedIcon />}
-                onClick={() => setShowPdf((v) => !v)}
-                sx={{ maxWidth: 170, lineHeight: 1.2, textAlign: "left", justifyContent: "flex-start" }}
-              >
-                {showPdf ? "Hide PDF" : "View PDF"}
-              </Button>
-            ) : null}
           </Stack>
-        </Box>
+        </Paper>
 
         {banner ? (
           <Alert severity="error" onClose={() => setBanner(null)}>
@@ -421,7 +449,7 @@ export const RunShow = () => {
 
         <Tabs value={tab} onChange={(_e, v) => setSearch({ tab: v })} variant="scrollable" scrollButtons="auto">
           {TABS.map((t) => (
-            <Tab key={t} value={t} label={TAB_LABEL[t]} />
+            <Tab key={t} value={t} icon={TAB_ICON[t]} iconPosition="start" label={tabCount[t] == null ? TAB_LABEL[t] : `${TAB_LABEL[t]} (${tabCount[t]})`} />
           ))}
         </Tabs>
 
@@ -433,9 +461,6 @@ export const RunShow = () => {
         ) : null}
         {tab === "driver" ? (
           <DriverTab run={run} drivers={drivers} canEdit={Boolean(canEdit)} exportBusy={exporting !== null} onExport={() => doExport("drivers")} onChanged={refreshAll} onError={err} />
-        ) : null}
-        {tab === "riskmeter" || tab === "osha" || tab === "safer" ? (
-          <ReportTab run={run} type={tab} canEdit={Boolean(canEdit)} onError={err} />
         ) : null}
       </Stack>
     </Box>

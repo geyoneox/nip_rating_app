@@ -38,8 +38,10 @@ declare module "@mui/material/Chip" {
 // `font.title` are kept as two separate tokens (and threaded through
 // `typography` below as `FONT_BODY` / `FONT_TITLE`) so a fork that wants a
 // distinct display face for headings only has to change `FONT_TITLE`.
-const FONT_BODY = '"Roboto", "Helvetica", "Arial", sans-serif';
-const FONT_TITLE = FONT_BODY;
+// Inter for reading, Poppins for headings, buttons and labels (loaded in
+// index.html). Both fall back to the system stack if the font host is blocked.
+const FONT_BODY = '"Inter", "Roboto", "Helvetica", "Arial", sans-serif';
+const FONT_TITLE = '"Poppins", "Inter", "Roboto", "Helvetica", "Arial", sans-serif';
 
 // Primary accent hex, hoisted so `button.primaryDefault` and the focus-ring
 // shadow token can never drift apart. This is MUI's own default primary
@@ -248,10 +250,26 @@ export const taruviTokens = {
     onDark: '#ffffff',
   },
 
+  // Gradients. Every stop is a ramp value above, and white text clears 4.5:1
+  // on every stop (blue[900], blue[700], purple[700]). Do not add a light stop
+  // such as teal: white on it falls under 3:1.
+  gradient: {
+    hero: 'linear-gradient(120deg, #0d47a1 0%, #1976d2 55%, #7b1fa2 135%)',
+    primary: 'linear-gradient(135deg, #1976d2 0%, #0d47a1 100%)',
+    primaryHover: 'linear-gradient(135deg, #1565c0 0%, #08213d 100%)',
+    sidebar: 'linear-gradient(180deg, #0b2a4f 0%, #08213d 100%)',
+    sidebarActive: 'linear-gradient(135deg, #1976d2 0%, #7b1fa2 150%)',
+    pageLight: 'linear-gradient(180deg, #e3effc 0%, #f5f5f5 360px)',
+    pageDark: 'linear-gradient(180deg, #0b1b30 0%, #121212 360px)',
+  },
+
   // Shadows
   shadow: {
-    card: '0 2px 12px rgba(0,0,0,0.07)',
-    cardDark: '0 2px 12px rgba(0,0,0,0.40)',
+    card: '0 4px 18px rgba(13,71,161,0.10)',
+    cardDark: '0 4px 18px rgba(0,0,0,0.50)',
+    raised: '0 10px 28px rgba(13,71,161,0.18)',
+    button: '0 4px 12px rgba(25,118,210,0.35)',
+    hero: '0 14px 34px rgba(13,71,161,0.28)',
     nav: '0 2px 8px rgba(0,0,0,0.12)',
     sidebar: '0 2px 8px rgba(0,0,0,0.08)',
     swatch: '0 1px 6px rgba(0,0,0,0.10)',
@@ -395,14 +413,15 @@ const typography: ThemeOptions['typography'] = {
   h1: {
     fontFamily: FONT_TITLE,
     fontSize: taruviTokens.fontSize.h1,         // 36px
-    fontWeight: 700,
+    fontWeight: 800,
     lineHeight: taruviTokens.lineHeight.heading,
-    letterSpacing: '-0.01em',
+    letterSpacing: '-0.02em',
   },
   h2: {
     fontFamily: FONT_TITLE,
     fontSize: taruviTokens.fontSize.h2,         // 28px
-    fontWeight: 700,
+    fontWeight: 800,
+    letterSpacing: '-0.015em',
     lineHeight: taruviTokens.lineHeight.h2,
   },
   h3: {
@@ -550,6 +569,10 @@ const componentOverrides = (mode: 'light' | 'dark'): ThemeOptions['components'] 
         },
         body: {
           backgroundColor: isLight ? taruviTokens.surface.bg : taruviTokens.neutral.darkest,
+          backgroundImage: isLight ? taruviTokens.gradient.pageLight : taruviTokens.gradient.pageDark,
+          backgroundRepeat: 'no-repeat',
+          backgroundAttachment: 'scroll',
+          minHeight: '100vh',
           color: isLight ? taruviTokens.text.primary : 'rgba(255,255,255,0.87)',
           fontFamily: FONT_BODY,
           fontSize: taruviTokens.fontSize.p3,
@@ -565,7 +588,7 @@ const componentOverrides = (mode: 'light' | 'dark'): ThemeOptions['components'] 
       defaultProps: { disableElevation: true, variant: 'contained', disableRipple: false },
       styleOverrides: {
         root: {
-          borderRadius: taruviTokens.radius.md,
+          borderRadius: taruviTokens.radius.lg,
           fontFamily: FONT_TITLE,
           fontWeight: 700,
           letterSpacing: taruviTokens.letterSpacing.button,
@@ -573,6 +596,8 @@ const componentOverrides = (mode: 'light' | 'dark'): ThemeOptions['components'] 
           boxShadow: 'none',
           transition: taruviTokens.transition.base,
           gap: 6,
+          '& .MuiButton-startIcon, & .MuiButton-endIcon': { '& > *:first-of-type': { fontSize: 20 } },
+          '&:not(.Mui-disabled):hover': { transform: 'translateY(-1px)' },
           // 44px min touch target on coarse pointers (mobile/tablet) — WCAG 2.5.5
           '@media (pointer: coarse)': {
             minHeight: 44,
@@ -598,16 +623,25 @@ const componentOverrides = (mode: 'light' | 'dark'): ThemeOptions['components'] 
           // ~3.7:1, white on blue[700] is ~4.6:1 (WCAG 1.4.3). Hover ~5.75:1,
           // active ~8.6:1.
           backgroundColor: taruviTokens.button.primaryFill,
+          backgroundImage: taruviTokens.gradient.primary,
+          boxShadow: taruviTokens.shadow.button,
           color: '#fff',
-          '&:hover': { backgroundColor: taruviTokens.button.primaryHover, boxShadow: 'none' },
-          '&:active': { backgroundColor: taruviTokens.button.primaryActive },
+          '&:hover': {
+            backgroundColor: taruviTokens.button.primaryHover,
+            backgroundImage: taruviTokens.gradient.primaryHover,
+            boxShadow: taruviTokens.shadow.raised,
+          },
+          '&:active': { backgroundColor: taruviTokens.button.primaryActive, transform: 'translateY(0)' },
           '&.Mui-disabled': {
             backgroundColor: taruviTokens.button.primaryDisabled,
+            backgroundImage: 'none',
+            boxShadow: 'none',
             color: taruviTokens.button.primaryDisabledText,
           },
         },
         outlinedPrimary: {
           borderWidth: 2,
+          fontWeight: 800,
           borderColor: accentFg,
           color: accentFg,
           '&:hover': {
@@ -686,9 +720,10 @@ const componentOverrides = (mode: 'light' | 'dark'): ThemeOptions['components'] 
           paddingRight: 4,
         },
         sizeSmall: {
-          height: taruviTokens.size.chipSm,            // 20px
+          height: taruviTokens.size.chipSm + 4,        // 24px, a little taller so an icon fits
           fontSize: taruviTokens.fontSize.chipSm,      // 10px
         },
+        icon: { fontSize: 16, marginLeft: 6, marginRight: -2 },
         outlined: { borderWidth: 1.5 },
         label: { paddingLeft: 8, paddingRight: 8 },
         // Color variants line up with MUI's color="success"/etc. These are
@@ -766,6 +801,7 @@ const componentOverrides = (mode: 'light' | 'dark'): ThemeOptions['components'] 
           borderRadius: taruviTokens.radius.xxl,        // 16px
           padding: taruviTokens.spacing.cardPadding,    // 28px
           boxShadow: isLight ? taruviTokens.shadow.card : taruviTokens.shadow.cardDark,
+          border: `1px solid ${dividerColor}`,
           backgroundImage: 'none',
           backgroundColor: isLight ? taruviTokens.surface.paper : '#1e1e1e',
         },
@@ -795,7 +831,7 @@ const componentOverrides = (mode: 'light' | 'dark'): ThemeOptions['components'] 
       defaultProps: { elevation: 0 },
       styleOverrides: {
         root: { backgroundImage: 'none' },
-        rounded: { borderRadius: taruviTokens.radius.xl }, // 12px default
+        rounded: { borderRadius: taruviTokens.radius.xxl }, // 16px
       },
     },
 
@@ -926,8 +962,8 @@ const componentOverrides = (mode: 'light' | 'dark'): ThemeOptions['components'] 
     MuiTableHead: {
       styleOverrides: {
         root: {
-          backgroundColor: isLight ? taruviTokens.neutral[50] : 'rgba(255,255,255,0.04)',
-          borderBottom: `1px solid ${dividerColor}`,
+          backgroundColor: isLight ? taruviTokens.primary[50] : 'rgba(30,136,229,0.14)',
+          borderBottom: `2px solid ${isLight ? taruviTokens.primary[200] : 'rgba(100,181,246,0.35)'}`,
         },
       },
     },
@@ -944,10 +980,11 @@ const componentOverrides = (mode: 'light' | 'dark'): ThemeOptions['components'] 
         head: {
           fontFamily: FONT_TITLE,
           fontSize: taruviTokens.fontSize.tableHead,   // 11px
-          fontWeight: 700,
+          fontWeight: 800,
           textTransform: 'uppercase',
           letterSpacing: taruviTokens.letterSpacing.tableHead,
-          color: isLight ? taruviTokens.text.muted : taruviTokens.neutral[400],
+          // primary[900] on primary[50] is ~10:1; the old muted grey was ~3:1.
+          color: isLight ? taruviTokens.primary[900] : taruviTokens.primary[200],
         },
         body: {
           fontFamily: FONT_BODY,
@@ -1017,8 +1054,8 @@ const componentOverrides = (mode: 'light' | 'dark'): ThemeOptions['components'] 
           // ever passes under it. A grid with a fixed height needs an opaque
           // value here or rows will show through the header band.
           '--DataGrid-containerBackground': isLight
-            ? taruviTokens.neutral[50]
-            : 'rgba(255,255,255,0.04)',
+            ? taruviTokens.primary[50]
+            : 'rgba(30,136,229,0.14)',
           // List pages use `autoHeight` (no fixed pixel height), and
           // `autoHeight` collapses DataGrid overlays to 0px. That silently
           // hides the loading skeleton and every empty state rendered
@@ -1052,7 +1089,7 @@ const componentOverrides = (mode: 'light' | 'dark'): ThemeOptions['components'] 
         // owns is the divider under the header, which draws on this element's
         // own bottom edge — below the header row, so it stays visible.
         columnHeaders: {
-          borderBottom: `1px solid ${dividerColor}`,
+          borderBottom: `2px solid ${isLight ? taruviTokens.primary[200] : 'rgba(100,181,246,0.35)'}`,
         },
         // Header labels share the cells' 16px inset (see `cell` below), which is
         // also what `MuiTableCell` uses for both head and body — the parity this
@@ -1085,10 +1122,10 @@ const componentOverrides = (mode: 'light' | 'dark'): ThemeOptions['components'] 
         columnHeaderTitle: {
           fontFamily: FONT_TITLE,
           fontSize: taruviTokens.fontSize.tableHead,                     // 11px
-          fontWeight: 700,
+          fontWeight: 800,
           textTransform: 'uppercase',
           letterSpacing: taruviTokens.letterSpacing.tableHead,
-          color: isLight ? taruviTokens.text.muted : taruviTokens.neutral[400],
+          color: isLight ? taruviTokens.primary[900] : taruviTokens.primary[200],
         },
         // Horizontal padding only. v7 ships `padding: 0 10px` on cells on
         // purpose: it centres content vertically via
@@ -1400,7 +1437,8 @@ const componentOverrides = (mode: 'light' | 'dark'): ThemeOptions['components'] 
         paper: {
           borderRadius: taruviTokens.radius.xxl,
           padding: taruviTokens.spacing.cardPadding,
-          boxShadow: isLight ? taruviTokens.shadow.card : taruviTokens.shadow.cardDark,
+          boxShadow: taruviTokens.shadow.hero,
+          borderTop: `6px solid ${taruviTokens.button.primaryDefault}`,
         },
       },
     },
@@ -1444,10 +1482,10 @@ const componentOverrides = (mode: 'light' | 'dark'): ThemeOptions['components'] 
     MuiTabs: {
       styleOverrides: {
         root: {
-          minHeight: 40,
+          minHeight: 52,
           borderBottom: `1px solid ${dividerColor}`,
         },
-        indicator: { backgroundColor: taruviTokens.button.primaryDefault, height: 3 },
+        indicator: { backgroundColor: taruviTokens.button.primaryDefault, height: 4, borderRadius: '4px 4px 0 0' },
       },
     },
     MuiTab: {
@@ -1455,13 +1493,21 @@ const componentOverrides = (mode: 'light' | 'dark'): ThemeOptions['components'] 
         root: {
           fontFamily: FONT_TITLE,
           fontSize: taruviTokens.fontSize.btnMd,       // 13px
-          fontWeight: 600,
+          fontWeight: 700,
           textTransform: 'uppercase',
           letterSpacing: taruviTokens.letterSpacing.button,
-          minHeight: 40,
-          // The 3px indicator below stays on `primaryDefault` (non-text, 3:1);
+          minHeight: 52,
+          gap: 8,
+          borderRadius: `${taruviTokens.radius.lg}px ${taruviTokens.radius.lg}px 0 0`,
+          transition: taruviTokens.transition.fast,
+          '&:hover': { backgroundColor: isLight ? taruviTokens.primary[50] : 'rgba(30,136,229,0.10)' },
+          // The 4px indicator stays on `primaryDefault` (non-text, 3:1);
           // the selected *label* is text, so it takes the AA accent.
-          '&.Mui-selected': { color: accentFg },
+          '&.Mui-selected': {
+            color: accentFg,
+            fontWeight: 800,
+            backgroundColor: isLight ? taruviTokens.primary[50] : 'rgba(30,136,229,0.16)',
+          },
         },
       },
     },
@@ -1497,8 +1543,8 @@ const componentOverrides = (mode: 'light' | 'dark'): ThemeOptions['components'] 
     // ─ Progress
     MuiLinearProgress: {
       styleOverrides: {
-        root: { borderRadius: taruviTokens.radius.sm, height: 6 },
-        bar: { borderRadius: taruviTokens.radius.sm },
+        root: { borderRadius: taruviTokens.radius.pill, height: 10 },
+        bar: { borderRadius: taruviTokens.radius.pill },
       },
     },
     MuiCircularProgress: {

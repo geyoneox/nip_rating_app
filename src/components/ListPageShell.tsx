@@ -1,53 +1,36 @@
 import type { ReactNode } from "react";
-import { CreateButton, List } from "@refinedev/mui";
+import { CreateButton } from "@refinedev/mui";
 import Box from "@mui/material/Box";
+import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
-import Typography from "@mui/material/Typography";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
+import FolderOpenRoundedIcon from "@mui/icons-material/FolderOpenRounded";
+import { PageHero } from "./PageHero";
+import { taruviTokens } from "../theme/themeOptions";
 
 /**
- * The standard list-page shell — see the "List page" section of the UI
- * guidelines (Taruvi-ai/ui-guidelines).
+ * The standard list-page shell.
  *
- * Every list page renders as **one** card section: heading + primary action,
- * then the toolbar row, then the active-filter chip row, then the rows. Use this
- * component rather than hand-rolling the scaffold.
- *
- * Why it exists: the guidelines mandate the *elements* of a list page (search,
- * filters, chip row, pagination, empty states) but never said what
- * **contained** them. Three list pages
- * were built in parallel against that spec and produced three different
- * compositions: one Refine `<List>` card, one pair of detached `<Paper>` blocks,
- * and one with no container and a fixed-height grid. All three satisfied the
- * checklist; none of them matched each other. This component removes the
- * ambiguity so composition can't drift again.
- *
- * Page-level padding lives here too — `ThemedLayout` is deliberately `p: 0` in
- * this template, so pages own their own padding, and having it in one place
- * keeps every list identical.
+ * A gradient hero (icon, title, primary action), an optional row of stat cards, then
+ * **one** card holding the toolbar row, the active-filter chip row and the rows.
+ * `ThemedLayout` is `p: 0` in this template, so the page padding lives here.
  */
 export type ListPageShellProps = {
-  /** Page heading. Rendered `variant="h2" component="h1"` — the page's only H1. */
+  /** Page heading. Rendered as the page's only H1. */
   title: string;
   /** One line under the heading, e.g. what the page is for. */
   subtitle?: string;
+  /** A `*Rounded` icon element for the hero. */
+  icon?: ReactNode;
   /** Custom primary action (for example a button that opens a dialog). Used instead of createLabel. */
   headerAction?: ReactNode;
-  /**
-   * Label for the primary create action, e.g. "New ticket". Omit to render no
-   * create button (for a resource the current role can't create).
-   */
+  /** Label for the primary create action. Omit to render no create button. */
   createLabel?: string;
-  /**
-   * Search input and filter controls. Supplied as children of the standard
-   * toolbar row, so every page gets identical toolbar layout and wrapping —
-   * don't add your own wrapping `<Stack>` or `<Paper>` around them.
-   */
+  /** Stat cards shown between the hero and the list card. */
+  stats?: ReactNode;
+  /** Search input and filter controls. Placed in the standard toolbar row. */
   toolbar: ReactNode;
-  /**
-   * Active-filter chip row (§4.1 item 4). Render `null`/`undefined` when no
-   * filter is set and the row disappears along with its spacing.
-   */
+  /** Active-filter chip row. Render `null` when no filter is set. */
   activeFilters?: ReactNode;
   /** The grid or list body, including its own empty and loading states. */
   children: ReactNode;
@@ -56,52 +39,54 @@ export type ListPageShellProps = {
 export const ListPageShell = ({
   title,
   subtitle,
+  icon,
   headerAction,
   createLabel,
+  stats,
   toolbar,
   activeFilters,
   children,
 }: ListPageShellProps) => (
   <Box sx={{ p: { xs: 2, md: 3 } }}>
-    <List
-      title={
-        <Box>
-          <Typography variant="h2" component="h1">
-            {title}
-          </Typography>
-          {subtitle ? (
-            <Typography variant="body2" color="text.secondary">
-              {subtitle}
-            </Typography>
-          ) : null}
-        </Box>
-      }
-      headerButtons={
-        headerAction ??
-        (createLabel ? (
-          <CreateButton variant="contained" startIcon={<AddRoundedIcon />}>
-            {createLabel}
-          </CreateButton>
-        ) : null)
-      }
-    >
-      {/*
-        Becomes a row at `sm`, not `md`: §4.1 sizes the search input to 280–320px
-        from `sm` up, so switching at `md` left the controls stacked at fixed
-        widths between the two breakpoints instead of full width.
-      */}
-      <Stack
-        direction={{ xs: "column", sm: "row" }}
-        spacing={1.5}
-        alignItems={{ xs: "stretch", sm: "center" }}
-        sx={{ mb: 2, flexWrap: "wrap", rowGap: 1.5 }}
+    <Stack spacing={2.5}>
+      <PageHero
+        icon={icon ?? <FolderOpenRoundedIcon />}
+        title={title}
+        subtitle={subtitle}
+        actions={
+          headerAction ??
+          (createLabel ? (
+            <CreateButton variant="contained" startIcon={<AddRoundedIcon />}>
+              {createLabel}
+            </CreateButton>
+          ) : null)
+        }
+      />
+
+      {stats}
+
+      <Paper
+        sx={{
+          p: { xs: 2, md: 3 },
+          border: 1,
+          borderColor: "divider",
+          boxShadow: (t) => (t.palette.mode === "light" ? taruviTokens.shadow.card : taruviTokens.shadow.cardDark),
+        }}
       >
-        {toolbar}
-      </Stack>
+        {/* A row from `sm` up, so the search box can take its width at the same breakpoint. */}
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={1.5}
+          alignItems={{ xs: "stretch", sm: "center" }}
+          sx={{ mb: 2, flexWrap: "wrap", rowGap: 1.5 }}
+        >
+          {toolbar}
+        </Stack>
 
-      {activeFilters ? <Box sx={{ mb: 1.5 }}>{activeFilters}</Box> : null}
+        {activeFilters ? <Box sx={{ mb: 1.5 }}>{activeFilters}</Box> : null}
 
-      {children}
-    </List>
+        {children}
+      </Paper>
+    </Stack>
   </Box>
 );

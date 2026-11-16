@@ -143,8 +143,12 @@ def norm_vin(v):
     return ''.join(str(v or '').upper().split())
 
 
-def is_trailer_type(body_type):
-    return 'trailer' in str(body_type or '').lower()
+def is_trailer_row(body_type, model, make):
+    # a row is a trailer when BODY_TYPE, MODEL or MAKE contains "trailer"
+    for v in (body_type, model, make):
+        if 'trailer' in str(v or '').lower():
+            return True
+    return False
 
 
 # ---------------- Gemini client interface: call(chunk) -> dict ----------------
@@ -355,7 +359,7 @@ def build_rows(merged, run, owner_id):
             'stated_amount_raw': txt(v.get('stated_amount')), 'stated_amount': to_num(v.get('stated_amount')),
             'comp_otc': txt(v.get('comp_otc')), 'coll': txt(v.get('coll')), 'net_veh_dr_cr': txt(v.get('net_veh_dr_cr')),
             'sic': txt(v.get('sic')),
-            'is_trailer': is_trailer_type(bt), 'is_duplicate': dup, 'edited_fields': {},
+            'is_trailer': is_trailer_row(bt, txt(v.get('model')), txt(v.get('make'))), 'is_duplicate': dup, 'edited_fields': {},
             'created_at': now, 'updated_at': now,
         })
     items = []
