@@ -1,4 +1,5 @@
 import math
+import re
 from datetime import datetime, timezone
 
 SITE_URL = 'https://insurance.taruvi.cloud'
@@ -118,6 +119,27 @@ def is_trailer_row(body_type, model, make):
         if 'trailer' in str(v or '').lower():
             return True
     return False
+
+
+VEHICLE_WORDS_RE = (r'\b(suv|sport utility|utility vehicle|pickup|truck|van|cab|chassis|ford|chevrolet|chevy|gmc|ram|dodge|'
+                    r'toyota|nissan|isuzu|international|freightliner|kenworth|peterbilt|mack|hino|mitsubishi|honda|jeep|'
+                    r'gator|deere|kubota|polaris|club car|cart|atv|utv|tractor|mower|loader|bobcat|skid|excavator)\b')
+TRAILER_NAME_RE = r'\b(big\s*(tex|tx)|utility|carson)\b'
+# VIN prefixes of trailer makers (Big Tex, DV, Carson, and two others seen on real applications)
+TRAILER_WMI = ['16V', '1D9', '4HX', '7G7', '4GM']
+
+
+def name_looks_like_trailer(v):
+    # ASSUMED rule: a row whose make/model says "Utility", "Big Tex" or "Carson", or whose VIN starts with a trailer
+    # maker's prefix (and that is not a truck, van, SUV or machine by name), is a trailer. Unlike a row that says
+    # "trailer", it is still validated with PriceDigest, because the original app used the PriceDigest price for its cost.
+    text = ' '.join([clean_text(v.get('make')), clean_text(v.get('model')), clean_text(v.get('body_type'))]).lower()
+    if not text or re.search(VEHICLE_WORDS_RE, text):
+        return False
+    vin = ''.join(str(v.get('vin') or '').upper().split())
+    if vin[:3] in TRAILER_WMI:
+        return True
+    return bool(re.search(TRAILER_NAME_RE, text))
 
 
 def type_texts(v, pd, trailer_row):
@@ -309,12 +331,22 @@ def ba_answer(raw, ocn, trailer, tiers):
 
 # ---------------- one vehicle ----------------
 def compute_vehicle(v, pd, ctx):
-    trailer_row = is_trailer_row(v.get('body_type'), v.get('model'), v.get('make'))
+    # a row that says "trailer", or is flagged by extraction, is a tabbed-only trailer: no PriceDigest, cost from the application
+    trailer_row = is_trailer_row(v.get('body_type'), v.get('model'), v.get('make')) or bool(v.get('is_trailer'))
+    # a row that only looks like a trailer by name or VIN prefix is rated as a trailer but keeps its PriceDigest values
+    # (the original app only rated it as a trailer when PriceDigest returned a price for it; with no price it gets no class code)
+    msrp_found = to_number((pd or {}).get('msrp'))
+    named_trailer = (not trailer_row) and name_looks_like_trailer(v) and msrp_found is not None and msrp_found > 0
     pd = {} if trailer_row else (pd or {})      # PriceDigest is skipped for trailer rows
     t, s = type_texts(v, pd, trailer_row)
+    if named_trailer:
+        t, s = 'trailer', ''
     detected = detect_type(t, s, is_yes(pd.get('is_tractor')))
     gvw = positive_weight(pd.get('gross_vehicle_weight'))
     gcw = positive_weight(pd.get('gross_combine_weight'))
+    # ASSUMED rule: PriceDigest gave a weight but no vehicle type, and it is not a tractor, so treat it as a truck
+    if detected is None and gvw is not None and not is_yes(pd.get('is_tractor')):
+        detected = 'truck_suv'
 
     special = state_code(v.get('garaging_state')) in SPECIAL_STATES or (
         not clean_text(v.get('garaging_state')) and state_code(ctx.get('insured_state')) in SPECIAL_STATES)

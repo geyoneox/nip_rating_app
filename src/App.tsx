@@ -25,6 +25,7 @@ import {
 } from "./providers/refineProviders";
 import { CustomSider, ErrorBoundary, UnsavedChangesDialog } from "./components";
 import { LoginRedirect } from "./components/auth/LoginRedirect";
+import { EnsureNipRole } from "./components/auth/EnsureNipRole";
 import { ColorModeContextProvider, ColorModeContext } from "./contexts/color-mode";
 import {AppSettingsProvider, useAppSettings} from "./contexts/app-settings";
 import { useContext, useRef, useEffect } from "react";
@@ -36,6 +37,8 @@ import FolderOpenRoundedIcon from "@mui/icons-material/FolderOpenRounded";
 import AssessmentRoundedIcon from "@mui/icons-material/AssessmentRounded";
 import AdminPanelSettingsRoundedIcon from "@mui/icons-material/AdminPanelSettingsRounded";
 import { useNavkitProfileMenuItems } from "./navkit/useNavkitProfileMenuItems";
+import { NavkitHelpButton } from "./navkit/NavkitHelpButton";
+import { HelpPage } from "./pages/help";
 import { taruviTokens } from "./theme/themeOptions";
 
 const AppContent = () => {
@@ -68,6 +71,7 @@ const AppContent = () => {
           getTheme={(theme) => setMode(theme)}
           profileMenuItems={profileMenuItems}
         />
+        <NavkitHelpButton navRef={navRef} />
       </div>
       <RefineSnackbarProvider>
             <DevtoolsProvider>
@@ -125,6 +129,7 @@ const AppContent = () => {
                         key="authenticated-inner"
                         fallback={<LoginRedirect />}
                       >
+                        <EnsureNipRole>
                         <ThemedLayout
                           Header={() => null}
                           Sider={CustomSider}
@@ -137,6 +142,7 @@ const AppContent = () => {
                             </ErrorBoundary>
                           </Box>
                         </ThemedLayout>
+                        </EnsureNipRole>
                       </Authenticated>
                     }
                   >
@@ -145,6 +151,7 @@ const AppContent = () => {
                     <Route path="/runs/show/:id" element={<RunShow />} />
                     <Route path="/usage-reports" element={<ReportsPage />} />
                     <Route path="/admin" element={<AdminPage />} />
+                    <Route path="/help" element={<HelpPage />} />
                     <Route path="*" element={<ErrorComponent />} />
                   </Route>
                 </Routes>

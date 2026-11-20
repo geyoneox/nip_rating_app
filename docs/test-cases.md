@@ -1,6 +1,6 @@
 # NIP Rating test cases
 
-Manual test plan. Use synthetic data only (no real insured, driver or licence details). Status: not run yet.
+Manual test plan. Use synthetic data only (no real insured, driver or licence details). Results are in the table at the end of this file.
 
 | # | Test | Steps | Expected result |
 |---|------|-------|-----------------|
@@ -12,3 +12,16 @@ Manual test plan. Use synthetic data only (no real insured, driver or licence de
 | 6 | Deductibles and IM rules | Check these cases: comp/OTC "Yes" with OCN 40,000 gives a 1,000 deductible; collision "Yes" with OCN 75,000 gives 2,000; with OCN 120,000 gives 5,000; a trailer always gives 1,000. IM: a crane gives 2,500; limit 300,000 gives 10,000; limit 150,000 gives 5,000; limit 99,999 gives 1,000 for Treepro or Landpro and 2,500 for other programs. | Every deductible matches. Small-tool items are left off the IM schedule. Also run worked examples 16 to 20 from `docs/rating-rules.md` section 5. |
 | 7 | Exports | Edit one cell, then click Export BA Worksheet, Export IM Worksheet and Export Drivers CSV. Open each file. | BA: rows start at row 6 and are numbered 1, 2, 3. Make and model are in capitals, the zip is 5 digits, and class code 03589 keeps its leading zero. Duplicates are left out. IM: missing years show Need and missing serials show Needed. Drivers CSV: the columns are in order, names are cleaned, the licence number has only letters and digits, Product Billing Code is 000, and every value is quoted. Your edit appears in the file. The template logo, dropdowns and all sheets are intact. |
 | 8 | Access and delete | As user_a, upload a run. As user_b, try to open it by link, validate it and export it. As a reviewer, open and export it, but try to edit and delete. As user_a, delete the run. | user_b is denied everything. The reviewer can view and export but not edit, validate or delete. After delete, the run, all its rows and its files are gone. |
+
+## Results (2026-11-17)
+
+| # | Result | Source |
+|---|--------|--------|
+| 1 | Passed | Run by the product owner in the browser (local dev server). Reported, not re-run by the assistant. |
+| 2 | Passed | Same as above. |
+| 3 | Passed | Same as above. |
+| 4 | Not run | Needs a live Dexter scraper job that can be stopped partway. |
+| 5 | Passed (function level) | Assistant ran the 37 recompute checks against the deployed `nip_recompute_rating`. Not yet checked through the screens. |
+| 6 | Partly run | Vehicle deductible rules checked at function level. IM deductible rules (crane, limits) not run. |
+| 7 | Server side only | Assistant ran BA, IM, Drivers and default exports on run 2526 TABBED APP 4.pdf (BA 3 files, IM 6 files, Drivers 404 rows). Opening the files in Excel and checking cells, logo and dropdowns is not done. |
+| 8 | Passed | Run by the product owner in the browser (local dev server). Reported, not re-run by the assistant. |

@@ -31,6 +31,19 @@ export const FN = {
 // ---------------------------------------------------------------------------
 export type Progress = { processed: number; total: number } | null;
 
+/** What nip_extract_worker saves in extraction_progress when it finishes. */
+export type ExtractionSummary = {
+  processed: number;
+  total: number;
+  seconds?: number;
+  passes?: { name: string; pages: number }[];
+  choices?: Record<string, { chosen: "base" | "revised"; chosen_titles?: string[]; rows: number; other?: string; other_titles?: string[]; other_rows?: number }>;
+  cleanup?: { vin_fixed?: number; stated_cleared?: number; stated_basis?: number; garaging_from_premises?: number };
+  premises?: Record<string, string | null>[];
+  warnings?: { pages: string; pass: string; reason: string }[];
+  mock?: boolean;
+};
+
 export type NipRun = {
   id: string;
   owner_id: string;
@@ -227,20 +240,44 @@ export const PLACEHOLDER_VINS = [
   "TBD",
   "PENDING",
 ];
+/** Class codes of the three trailer types (semi trailer, utility trailer, trailer), standard and special-state. */
+export const TRAILER_CLASS_CODES = ["67489", "67589", "68489", "68589", "69489", "69589"];
 export const normalizeVin = (v?: string | null) => (v ?? "").toUpperCase().replace(/\s+/g, "");
 export const isPlaceholderVin = (v?: string | null) =>
   PLACEHOLDER_VINS.includes(normalizeVin(v).replace(/[^A-Z]/g, ""));
 export const isValidVin = (v?: string | null) => /^[A-HJ-NPR-Z0-9]{17}$/.test(normalizeVin(v));
 
+const VIN_VALUES: Record<string, number> = {
+  A: 1, B: 2, C: 3, D: 4, E: 5, F: 6, G: 7, H: 8, J: 1, K: 2, L: 3, M: 4, N: 5, P: 7, R: 9,
+  S: 2, T: 3, U: 4, V: 5, W: 6, X: 7, Y: 8, Z: 9,
+};
+const VIN_WEIGHTS = [8, 7, 6, 5, 4, 3, 2, 10, 0, 9, 8, 7, 6, 5, 4, 3, 2];
+
+/**
+ * False when a North American VIN (first character 1 to 5) fails its check digit (position 9), which almost
+ * always means a character was misread. Other VINs, and VINs that are not 17 valid characters, return true.
+ */
+export function vinCheckDigitOk(v?: string | null): boolean {
+  const s = normalizeVin(v);
+  if (!isValidVin(s) || !"12345".includes(s[0])) return true;
+  let sum = 0;
+  for (let i = 0; i < 17; i++) {
+    const c = s[i];
+    sum += (/\d/.test(c) ? Number(c) : VIN_VALUES[c]) * VIN_WEIGHTS[i];
+  }
+  const r = sum % 11;
+  return (r === 10 ? "X" : String(r)) === s[8];
+}
+
 export function failureReason(r: Pick<NipValidationResult, "error">): string {
   const e = (r.error ?? "").toLowerCase();
   if (!e) return "Failed";
-  if (e.includes("not found")) return "VIN not found in PriceDigest";
   if (e.includes("length") || e.includes("format") || e.includes("invalid vin"))
     return "Invalid VIN length or format";
   if (e.includes("timeout") || e.includes("connection") || e.includes("timed out"))
     return "Scraper service connection timeout";
-  return r.error as string;
+  // any other PriceDigest error text is grouped, so one filter pill covers it
+  return "PriceDigest lookup failed";
 }
 
 // ---------------------------------------------------------------------------
@@ -339,6 +376,17 @@ export async function openExport(result: any) {
   const name: string = result?.file_name ?? "export";
   if (url) {
     window.open(url, "_blank", "noopener");
+    return;
+  }
+  // Large runs are split into several workbooks: download each one in turn.
+  const files: { file_ref: string; file_name?: string }[] = Array.isArray(result?.files)
+    ? result.files.filter((f: any) => f?.file_ref)
+    : [];
+  if (files.length > 1) {
+    for (let i = 0; i < files.length; i++) {
+      if (i > 0) await new Promise((resolve) => setTimeout(resolve, 700));
+      await downloadFromBucket(BUCKETS.exports, files[i].file_ref, files[i].file_name ?? `${name}-${i + 1}`);
+    }
     return;
   }
   if (result?.file_ref) {

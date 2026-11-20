@@ -6,6 +6,7 @@ import Stack from "@mui/material/Stack";
 import Tab from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
 import AdminPanelSettingsRoundedIcon from "@mui/icons-material/AdminPanelSettingsRounded";
+import GroupsRoundedIcon from "@mui/icons-material/GroupsRounded";
 import InsightsRoundedIcon from "@mui/icons-material/InsightsRounded";
 import StorageRoundedIcon from "@mui/icons-material/StorageRounded";
 import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
@@ -13,11 +14,12 @@ import { PageHero } from "../../components";
 import { RefDataEditor } from "./RefDataEditor";
 import { TemplatesPanel } from "./TemplatesPanel";
 import { UsageReports } from "./UsageReports";
+import { UsersPanel } from "./UsersPanel";
 import { useNipAccess } from "../../lib/useNipAccess";
 
 /** Admin area. The policies are the real guard; this page only hides itself from other roles. */
 export const AdminPage = () => {
-  const { isAdmin, isLoading } = useNipAccess();
+  const { isAdmin, isSuperAdmin, isLoading } = useNipAccess();
   const [tab, setTab] = useState(0);
   if (isLoading) return null;
   if (!isAdmin) {
@@ -33,17 +35,19 @@ export const AdminPage = () => {
         <PageHero
           icon={<AdminPanelSettingsRoundedIcon />}
           title="Admin"
-          subtitle="Manage reference data, worksheet templates and usage reports."
+          subtitle="Manage reference data, worksheet templates, usage reports and people's roles."
         />
         <Paper sx={{ p: { xs: 2, md: 3 }, border: 1, borderColor: "divider" }}>
           <Tabs value={tab} onChange={(_e, v) => setTab(v)} variant="scrollable" scrollButtons="auto" sx={{ mb: 2.5 }}>
             <Tab icon={<StorageRoundedIcon />} iconPosition="start" label="Reference data" />
             <Tab icon={<UploadFileRoundedIcon />} iconPosition="start" label="Templates" />
             <Tab icon={<InsightsRoundedIcon />} iconPosition="start" label="Usage reports" />
+            {isSuperAdmin ? <Tab icon={<GroupsRoundedIcon />} iconPosition="start" label="People and roles" /> : null}
           </Tabs>
           {tab === 0 ? <RefDataEditor /> : null}
           {tab === 1 ? <TemplatesPanel /> : null}
           {tab === 2 ? <UsageReports /> : null}
+          {tab === 3 ? <UsersPanel /> : null}
         </Paper>
       </Stack>
     </Box>

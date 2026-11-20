@@ -26,9 +26,14 @@ export function useNipAccess() {
   const names = roleNames(identity);
   const has = (r: string) => names.includes(r) || names.includes(`nip_rating-${r}`);
 
-  const isAdmin = has("nip_admin") || Boolean(identity?.is_superuser);
+  /** Super Admin of this app (a role that sits above nip_admin). Needed to manage people's roles. */
+  const isSuperAdmin = Boolean(identity?.is_superuser) || names.some((n) => /super[ -]?admin/i.test(n));
+  const isAdmin = has("nip_admin") || isSuperAdmin;
   const isReviewer = has("nip_reviewer");
   const isUser = has("nip_user") || (!isAdmin && !isReviewer && names.length === 0);
+  /** Holds a real NIP role (unlike `isUser`, which is also true for a person with no role). */
+  const hasAnyRole =
+    has("nip_user") || has("nip_reviewer") || has("nip_admin") || names.some((n) => /super[ -]?admin/i.test(n));
   const userId: string | undefined = identity?.id ? String(identity.id) : undefined;
 
   const canSeeSensitive = SENSITIVE_VISIBLE_ROLES.some((r) => has(r)) || isAdmin;
@@ -37,5 +42,5 @@ export function useNipAccess() {
   const canEditRun = (run?: Pick<NipRun, "owner_id"> | null) =>
     Boolean(run) && (isAdmin || (isUser && run!.owner_id === userId));
 
-  return { identity, isLoading, userId, isAdmin, isReviewer, isUser, canSeeSensitive, canEditRun };
+  return { identity, isLoading, userId, isAdmin, isSuperAdmin, isReviewer, isUser, hasAnyRole, canSeeSensitive, canEditRun };
 }

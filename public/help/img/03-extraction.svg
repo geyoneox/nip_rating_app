@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 560" width="1000" height="560" role="img" aria-label="Run page: 1 progress while extracting, 2 summary of what was read once it finishes">
+<rect width="1000" height="560" fill="#eef0f3"/>
+<rect width="1000" height="48" fill="#073b5c"/>
+<text x="18" y="31" font-family="Roboto, Arial, sans-serif" font-size="19" fill="#fff" font-weight="500" text-anchor="start">NIP Rating</text>
+<circle cx="912" cy="24" r="11" fill="none" stroke="#9de5fd" stroke-width="2"/><text x="912" y="29" font-family="Roboto, Arial, sans-serif" font-size="14" fill="#9de5fd" font-weight="700" text-anchor="middle">?</text>
+<circle cx="958" cy="24" r="11" fill="none" stroke="#9de5fd" stroke-width="2"/><circle cx="958" cy="21" r="4" fill="none" stroke="#9de5fd" stroke-width="2"/>
+<rect x="0" y="48" width="72" height="512" fill="#fff" stroke="#d9dee3"/>
+<rect x="0" y="62" width="72" height="54" fill="#1976d2"/>
+<rect x="27" y="70" width="18" height="16" rx="3" fill="#fff"/>
+<text x="36" y="104" font-family="Roboto, Arial, sans-serif" font-size="10" fill="#fff" font-weight="500" text-anchor="middle">Runs</text>
+<rect x="27" y="132" width="18" height="16" rx="3" fill="#5f6b76"/>
+<text x="36" y="166" font-family="Roboto, Arial, sans-serif" font-size="10" fill="#5f6b76" font-weight="500" text-anchor="middle">Reports</text>
+<rect x="27" y="194" width="18" height="16" rx="3" fill="#5f6b76"/>
+<text x="36" y="228" font-family="Roboto, Arial, sans-serif" font-size="10" fill="#5f6b76" font-weight="500" text-anchor="middle">Admin</text>
+<rect x="92" y="66" width="890" height="476" rx="8" fill="#fff" stroke="#d9dee3" stroke-width="1"/>
+<text x="116" y="104" font-family="Roboto, Arial, sans-serif" font-size="22" fill="#1f2933" font-weight="500" text-anchor="start">SAMPLE FLEET APPLICATION.PDF</text>
+<rect x="116" y="82" width="130" height="34" rx="4" fill="#fff" stroke="#1976d2" stroke-width="1"/><text x="181" y="104" font-family="Roboto, Arial, sans-serif" font-size="12" fill="#1976d2" font-weight="500" text-anchor="middle">BACK TO RUNS</text>
+<rect x="116" y="136" width="842" height="92" rx="6" fill="#e8f0fe" stroke="#c5d8fb" stroke-width="1"/>
+<text x="136" y="164" font-family="Roboto, Arial, sans-serif" font-size="14" fill="#1976d2" font-weight="500" text-anchor="start">Extraction is in progress. This view will refresh automatically.</text>
+<rect x="136" y="180" width="800" height="8" rx="4" fill="#c5d8fb"/><rect x="136" y="180" width="420" height="8" rx="4" fill="#1976d2"/>
+<text x="136" y="212" font-family="Roboto, Arial, sans-serif" font-size="12" fill="#5f6b76" font-weight="400" text-anchor="start">25/47 parts read</text>
+<rect x="111" y="131" width="852" height="102" rx="8" fill="none" stroke="#d32f2f" stroke-width="3" stroke-dasharray="7 4"/><circle cx="111" cy="131" r="14" fill="#d32f2f"/><text x="111" y="136" font-family="Roboto, Arial, sans-serif" font-size="14" fill="#fff" font-weight="700" text-anchor="middle">1</text>
+<rect x="116" y="250" width="842" height="46" rx="6" fill="#fff" stroke="#d9dee3" stroke-width="1"/>
+<text x="136" y="279" font-family="Roboto, Arial, sans-serif" font-size="14" fill="#1f2933" font-weight="500" text-anchor="start">Extraction read 24 pages in 5 parts in 40 s   v</text>
+<rect x="111" y="245" width="852" height="56" rx="8" fill="none" stroke="#d32f2f" stroke-width="3" stroke-dasharray="7 4"/><circle cx="111" cy="245" r="14" fill="#d32f2f"/><text x="111" y="250" font-family="Roboto, Arial, sans-serif" font-size="14" fill="#fff" font-weight="700" text-anchor="middle">2</text>
+<text x="136" y="330" font-family="Roboto, Arial, sans-serif" font-size="12" fill="#5f6b76" font-weight="400" text-anchor="start">Vehicles  - Base kept: 42 rows from AUTO, VEH SCHED</text>
+<text x="136" y="352" font-family="Roboto, Arial, sans-serif" font-size="12" fill="#5f6b76" font-weight="400" text-anchor="start">Equipment (IM) - Base kept: 18 rows from IM</text>
+<text x="500" y="554" font-family="Roboto, Arial, sans-serif" font-size="11" fill="#5f6b76" font-weight="400" text-anchor="middle">Run page: 1 progress while extracting, 2 summary of what was read once it finishes</text>
+</svg>

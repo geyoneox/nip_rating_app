@@ -31,6 +31,8 @@ import TableChartRoundedIcon from "@mui/icons-material/TableChartRounded";
 import VisibilityOffRoundedIcon from "@mui/icons-material/VisibilityOffRounded";
 import VisibilityRoundedIcon from "@mui/icons-material/VisibilityRounded";
 import { AutoTab } from "./tabs/AutoTab";
+import { ExtractionSummary } from "./ExtractionSummary";
+import type { ExtractionSummary as ExtractionSummaryData } from "../../lib/nip";
 import { ImTab } from "./tabs/ImTab";
 import { DriverTab } from "./tabs/DriverTab";
 import { PageHero, StatusChip } from "../../components";
@@ -91,7 +93,7 @@ export const RunShow = () => {
   const navigate = useNavigate();
   const [search, setSearch] = useSearchParams();
   const tab = (TABS.includes(search.get("tab") as TabKey) ? search.get("tab") : "auto") as TabKey;
-  const { canEditRun, isReviewer, isAdmin } = useNipAccess();
+  const { canEditRun } = useNipAccess();
 
   const [banner, setBanner] = useState<string | null>(null);
   const [exporting, setExporting] = useState<string | null>(null);
@@ -169,7 +171,6 @@ export const RunShow = () => {
       gone = true;
       if (url) URL.revokeObjectURL(url);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showPdf, run?.file_ref, run?.source_type]);
 
   // ---- actions ----
@@ -189,7 +190,9 @@ export const RunShow = () => {
     setBanner(null);
     try {
       const out: any = await callFn(kind === "ba" ? FN.exportBa : kind === "im" ? FN.exportIm : kind === "default" ? FN.exportDefault : FN.exportDrivers, { run_id: id });
+      const parts = Array.isArray(out?.files) ? out.files.length : 0;
       if (out?.warning) setBanner(out.warning);
+      else if (parts > 1) setBanner(`This run is larger than one worksheet holds, so it was split into ${parts} files. Your browser may ask to allow multiple downloads.`);
       await openExport(out);
     } catch (e: any) {
       err(/not found|404|does not exist|no function/i.test(String(e?.message)) ? "This export is not available yet." : e.message);
@@ -356,9 +359,10 @@ export const RunShow = () => {
           <Alert severity="info">
             <AlertTitle>Extraction is in progress. This view will refresh automatically.</AlertTitle>
             <LinearProgress variant={run.extraction_progress?.total ? "determinate" : "indeterminate"} value={progressPct(run.extraction_progress)} sx={{ my: 1 }} />
-            {run.extraction_progress?.total ? `${run.extraction_progress.processed}/${run.extraction_progress.total} chunks` : "Starting…"}
+            {run.extraction_progress?.total ? `${run.extraction_progress.processed}/${run.extraction_progress.total} parts read` : "Reading the bookmarks and planning…"}
           </Alert>
         ) : null}
+        {run.extraction_status === "complete" ? <ExtractionSummary summary={run.extraction_progress as ExtractionSummaryData | null} /> : null}
         {run.extraction_status === "failed" ? (
           <Alert
             severity="error"

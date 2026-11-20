@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 560" width="1000" height="560" role="img" aria-label="Admin (Super Admin only): 1 People and roles tab, 2 change a person's role">
+<rect width="1000" height="560" fill="#eef0f3"/>
+<rect width="1000" height="48" fill="#073b5c"/>
+<text x="18" y="31" font-family="Roboto, Arial, sans-serif" font-size="19" fill="#fff" font-weight="500" text-anchor="start">NIP Rating</text>
+<circle cx="912" cy="24" r="11" fill="none" stroke="#9de5fd" stroke-width="2"/><text x="912" y="29" font-family="Roboto, Arial, sans-serif" font-size="14" fill="#9de5fd" font-weight="700" text-anchor="middle">?</text>
+<circle cx="958" cy="24" r="11" fill="none" stroke="#9de5fd" stroke-width="2"/><circle cx="958" cy="21" r="4" fill="none" stroke="#9de5fd" stroke-width="2"/>
+<rect x="0" y="48" width="72" height="512" fill="#fff" stroke="#d9dee3"/>
+<rect x="27" y="70" width="18" height="16" rx="3" fill="#5f6b76"/>
+<text x="36" y="104" font-family="Roboto, Arial, sans-serif" font-size="10" fill="#5f6b76" font-weight="500" text-anchor="middle">Runs</text>
+<rect x="27" y="132" width="18" height="16" rx="3" fill="#5f6b76"/>
+<text x="36" y="166" font-family="Roboto, Arial, sans-serif" font-size="10" fill="#5f6b76" font-weight="500" text-anchor="middle">Reports</text>
+<rect x="0" y="186" width="72" height="54" fill="#1976d2"/>
+<rect x="27" y="194" width="18" height="16" rx="3" fill="#fff"/>
+<text x="36" y="228" font-family="Roboto, Arial, sans-serif" font-size="10" fill="#fff" font-weight="500" text-anchor="middle">Admin</text>
+<rect x="92" y="66" width="890" height="476" rx="8" fill="#fff" stroke="#d9dee3" stroke-width="1"/>
+<text x="116" y="104" font-family="Roboto, Arial, sans-serif" font-size="22" fill="#1f2933" font-weight="500" text-anchor="start">ADMIN</text>
+<text x="116" y="128" font-family="Roboto, Arial, sans-serif" font-size="13" fill="#1976d2" font-weight="500" text-anchor="start">Reference data    Templates    Usage reports    People and roles</text>
+<rect x="555" y="107" width="140" height="34" rx="8" fill="none" stroke="#d32f2f" stroke-width="3" stroke-dasharray="7 4"/><circle cx="555" cy="107" r="14" fill="#d32f2f"/><text x="555" y="112" font-family="Roboto, Arial, sans-serif" font-size="14" fill="#fff" font-weight="700" text-anchor="middle">1</text>
+<rect x="116" y="150" width="280" height="40" rx="4" fill="#f0f0f0" stroke="#f0f0f0" stroke-width="1"/>
+<text x="130" y="175" font-family="Roboto, Arial, sans-serif" font-size="13" fill="#5f6b76" font-weight="400" text-anchor="start">Search people</text>
+<rect x="116" y="206" width="842" height="102" rx="4" fill="#fff" stroke="#d9dee3" stroke-width="1"/>
+<text x="126" y="228" font-family="Roboto, Arial, sans-serif" font-size="10" fill="#5f6b76" font-weight="500" text-anchor="start">NAME</text>
+<text x="296" y="228" font-family="Roboto, Arial, sans-serif" font-size="10" fill="#5f6b76" font-weight="500" text-anchor="start">EMAIL</text>
+<text x="556" y="228" font-family="Roboto, Arial, sans-serif" font-size="10" fill="#5f6b76" font-weight="500" text-anchor="start">STATUS</text>
+<text x="666" y="228" font-family="Roboto, Arial, sans-serif" font-size="10" fill="#5f6b76" font-weight="500" text-anchor="start">LAST SIGN-IN</text>
+<text x="806" y="228" font-family="Roboto, Arial, sans-serif" font-size="10" fill="#5f6b76" font-weight="500" text-anchor="start">NIP ROLE</text>
+<line x1="116" y1="240" x2="958" y2="240" stroke="#d9dee3"/>
+<text x="126" y="262" font-family="Roboto, Arial, sans-serif" font-size="12" fill="#1f2933" font-weight="400" text-anchor="start">Jane Example</text>
+<text x="296" y="262" font-family="Roboto, Arial, sans-serif" font-size="12" fill="#1f2933" font-weight="400" text-anchor="start">jane.example@example.com</text>
+<text x="556" y="262" font-family="Roboto, Arial, sans-serif" font-size="12" fill="#1f2933" font-weight="400" text-anchor="start">Active</text>
+<text x="666" y="262" font-family="Roboto, Arial, sans-serif" font-size="12" fill="#1f2933" font-weight="400" text-anchor="start">Nov 12, 2026</text>
+<text x="806" y="262" font-family="Roboto, Arial, sans-serif" font-size="12" fill="#1f2933" font-weight="400" text-anchor="start">Admin  v</text>
+<text x="126" y="296" font-family="Roboto, Arial, sans-serif" font-size="12" fill="#1f2933" font-weight="400" text-anchor="start">Sam Sample</text>
+<text x="296" y="296" font-family="Roboto, Arial, sans-serif" font-size="12" fill="#1f2933" font-weight="400" text-anchor="start">sam.sample@example.com</text>
+<text x="556" y="296" font-family="Roboto, Arial, sans-serif" font-size="12" fill="#1f2933" font-weight="400" text-anchor="start">Active</text>
+<text x="666" y="296" font-family="Roboto, Arial, sans-serif" font-size="12" fill="#1f2933" font-weight="400" text-anchor="start">Nov 13, 2026</text>
+<text x="806" y="296" font-family="Roboto, Arial, sans-serif" font-size="12" fill="#1f2933" font-weight="400" text-anchor="start">User  v</text>
+<rect x="791" y="235" width="172" height="78" rx="8" fill="none" stroke="#d32f2f" stroke-width="3" stroke-dasharray="7 4"/><circle cx="791" cy="235" r="14" fill="#d32f2f"/><text x="791" y="240" font-family="Roboto, Arial, sans-serif" font-size="14" fill="#fff" font-weight="700" text-anchor="middle">2</text>
+<text x="500" y="554" font-family="Roboto, Arial, sans-serif" font-size="11" fill="#5f6b76" font-weight="400" text-anchor="middle">Admin (Super Admin only): 1 People and roles tab, 2 change a person's role</text>
+</svg>

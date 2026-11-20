@@ -9,6 +9,7 @@ import Checkbox from "@mui/material/Checkbox";
 import Chip from "@mui/material/Chip";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import Stack from "@mui/material/Stack";
+import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { alpha } from "@mui/material/styles";
 import CheckBoxRoundedIcon from "@mui/icons-material/CheckBoxRounded";
@@ -22,7 +23,9 @@ import {
   fmtMoney,
   fmtNum,
   isPlaceholderVin,
+  TRAILER_CLASS_CODES,
   isValidVin,
+  vinCheckDigitOk,
   normalizeVin,
   saveEdit,
   type NipRun,
@@ -49,30 +52,39 @@ const Stat = ({
   tone,
   tint,
   icon,
+  large,
 }: {
   label: string;
   value: number | string;
   tone?: Tone;
   tint?: Tone;
   icon?: ReactNode;
+  /** The four status cards (total, passed, failed, pending): taller, upper-case label, bigger number. */
+  large?: boolean;
 }) => (
   <Card
     variant="outlined"
     sx={(t) => ({
-      minWidth: 150,
-      flex: "1 1 150px",
-      bgcolor: tint ? alpha(t.palette[tint].main, 0.1) : undefined,
-      borderColor: tint ? alpha(t.palette[tint].main, 0.4) : undefined,
+      p: 0,
+      minWidth: large ? 200 : 150,
+      flex: large ? "1 1 200px" : "1 1 150px",
+      boxShadow: "none",
+      bgcolor: tint ? alpha(t.palette[tint].main, 0.08) : "background.paper",
+      borderColor: tint ? alpha(t.palette[tint].main, 0.35) : "divider",
     })}
   >
-    <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
+    <CardContent sx={{ px: 2, py: large ? 2.25 : 1.5, "&:last-child": { pb: large ? 2.25 : 1.5 } }}>
       <Stack direction="row" justifyContent="space-between" alignItems="center">
-        <Typography variant="caption" color={tint ? `${tint}.dark` : "text.secondary"}>
+        <Typography
+          variant={large ? "overline" : "body2"}
+          sx={{ fontWeight: 600, lineHeight: 1.4 }}
+          color={tint ? `${tint}.dark` : "text.secondary"}
+        >
           {label}
         </Typography>
         {icon}
       </Stack>
-      <Typography variant="h5" color={tone ? `${tone}.main` : undefined}>
+      <Typography variant={large ? "h2" : "h4"} component="p" sx={{ mt: 0.5 }} color={tone ? `${tone}.dark` : "text.primary"}>
         {value}
       </Typography>
     </CardContent>
@@ -103,9 +115,16 @@ export const AutoTab = ({ run, vehicles, results, canEdit, onChanged, onError, o
   const counted = rows.filter((r) => !r.is_trailer && !r.is_duplicate);
   const passed = counted.filter((r) => r._res?.success).length;
   const failedRows = counted.filter((r) => r._res && !r._res.success && !r._res.skipped);
-  const pending = counted.length - passed - failedRows.length;
+  // Pending = a valid VIN that has no result yet. Rows with no VIN, a placeholder or an invalid VIN are never
+  // sent for validation, so they are counted as skipped, not pending.
+  const pending = counted.filter((r) => !r._res && isValidVin(r.vin) && !isPlaceholderVin(r.vin)).length;
+  const skippedRows = counted.length - passed - failedRows.length - pending;
   const dup = rows.filter((r) => r.is_duplicate).length;
+  // every row, duplicates included, that is a trailer: flagged at extraction or rated with a trailer class code
+  const trailerRows = rows.filter((r) => r.is_trailer || (r.class_code != null && TRAILER_CLASS_CODES.includes(String(r.class_code)))).length;
   const diag = run.queue_diagnostics ?? {};
+  // VINs whose check digit is wrong were very likely misread from the application
+  const checkDigitRows = rows.filter((r) => !r.is_duplicate && !r.is_trailer && r.vin && !vinCheckDigitOk(r.vin));
 
   const reasons = useMemo(() => {
     const m = new Map<string, number>();
@@ -171,6 +190,11 @@ export const AutoTab = ({ run, vehicles, results, canEdit, onChanged, onError, o
           {r.is_duplicate ? <Chip size="small" color="warning" label="DUPLICATE" /> : null}
           {r.is_trailer ? <Chip size="small" label="TRAILER" /> : null}
           {!r.is_trailer && r.vin && !isPlaceholderVin(r.vin) && !isValidVin(r.vin) ? <Chip size="small" color="error" label="INVALID VIN" /> : null}
+          {!r.is_trailer && r.vin && !vinCheckDigitOk(r.vin) ? (
+            <Tooltip title="The 9th character (check digit) does not match the rest of the VIN, so a character was probably misread. Check it against the application.">
+              <Chip size="small" color="warning" label="CHECK DIGIT" />
+            </Tooltip>
+          ) : null}
         </Stack>
       ),
     },
@@ -224,47 +248,80 @@ export const AutoTab = ({ run, vehicles, results, canEdit, onChanged, onError, o
 
   return (
     <Stack spacing={2}>
-      <Box>
-        <Typography variant="subtitle1" sx={{ mb: 1 }}>
+      <Box
+        component="section"
+        aria-labelledby="vin-dashboard-title"
+        sx={{ p: 2.5, borderRadius: 2, border: 1, borderColor: "divider", bgcolor: (t) => alpha(t.palette.text.primary, 0.02) }}
+      >
+        <Typography id="vin-dashboard-title" variant="h6" component="h2" sx={{ textTransform: "uppercase", letterSpacing: "0.04em" }}>
           VIN Validation Status Dashboard
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: 1.5 }}>
+          {skippedRows} rows skipped for blank, invalid, or excluded VINs. Trailer rows use the application values.
+          {checkDigitRows.length ? ` ${checkDigitRows.length} VIN${checkDigitRows.length === 1 ? "" : "s"} fail the VIN check digit and may be misread: check them before validating.` : ""}
         </Typography>
         <Stack direction="row" flexWrap="wrap" gap={1.5} sx={{ mb: 1.5 }}>
           <Stat label="Unique VINs Queued" value={diag.uniqueVinCount ?? diag.validationVinCount ?? 0} />
           <Stat label="Duplicate Rows Skipped" value={diag.duplicateVinCount ?? dup} tint="error" tone="error" />
           <Stat label="Invalid VINs Skipped" value={diag.invalidVinCount ?? 0} tint="warning" tone="warning" />
           <Stat label="Blank / Placeholder Skipped" value={(diag.blankVinCount ?? 0) + (diag.placeholderVinCount ?? 0)} />
-          <Stat label="Trailers (Tabbed App Only)" value={diag.trailerVinCount ?? rows.filter((r) => r.is_trailer).length} />
+          <Stat label="Trailers (Tabbed App Only)" value={trailerRows} />
         </Stack>
         <Stack direction="row" flexWrap="wrap" gap={1.5}>
-          <Stat label="Total Vehicles" value={counted.length} />
-          <Stat label="Passed" value={passed} tone="success" tint="success" icon={<CheckBoxRoundedIcon fontSize="small" color="success" />} />
-          <Stat label="Failed" value={failedRows.length} tone="error" tint="error" icon={<WarningAmberRoundedIcon fontSize="small" color="error" />} />
-          <Stat label="Pending" value={pending} tone="info" tint="info" icon={<HourglassBottomRoundedIcon fontSize="small" color="info" />} />
+          <Stat large label="Total Vehicles" value={counted.length} />
+          <Stat large label="Passed" value={passed} tone="success" tint="success" icon={<CheckBoxRoundedIcon fontSize="small" color="success" />} />
+          <Stat large label="Failed" value={failedRows.length} tone="error" tint="error" icon={<WarningAmberRoundedIcon fontSize="small" color="warning" />} />
+          <Stat large label="Pending" value={pending} tone="info" tint="info" icon={<HourglassBottomRoundedIcon fontSize="small" color="warning" />} />
         </Stack>
-      </Box>
 
       {reasons.length > 0 ? (
-        <Stack direction="row" flexWrap="wrap" gap={1} alignItems="center">
-          <Typography variant="body2" color="text.secondary">
-            Failures:
-          </Typography>
-          {reasons.map(([reason, n]) => (
-            <Chip
-              key={reason}
-              color="error"
-              size="small"
-              variant={reasonFilter === reason ? "filled" : "outlined"}
-              label={`${reason} (${n})`}
-              onClick={() => setReasonFilter(reasonFilter === reason ? null : reason)}
-            />
-          ))}
-          {reasonFilter ? (
-            <Button size="small" onClick={() => setReasonFilter(null)}>
-              Clear Filter
-            </Button>
-          ) : null}
-        </Stack>
+        <Box aria-labelledby="failure-filters-title" sx={{ mt: 2.5, pt: 2, borderTop: 1, borderColor: "divider" }}>
+          <Stack direction="row" alignItems="baseline" gap={1} flexWrap="wrap" sx={{ mb: 1.25 }}>
+            <Typography id="failure-filters-title" variant="subtitle2" component="h3" color="text.secondary">
+              Failure breakdown &amp; filters
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              (Click a pill to filter the vehicle table below)
+            </Typography>
+          </Stack>
+          <Stack direction="row" flexWrap="wrap" gap={1} alignItems="center">
+            {reasons.map(([reason, n]) => {
+              const active = reasonFilter === reason;
+              return (
+                <Chip
+                  key={reason}
+                  color="error"
+                  variant={active || !reasonFilter ? "filled" : "outlined"}
+                  aria-pressed={active}
+                  onClick={() => setReasonFilter(active ? null : reason)}
+                  label={
+                    <Stack direction="row" alignItems="center" gap={1} component="span">
+                      <span>{reason}</span>
+                      <Box
+                        component="span"
+                        aria-label={`${n} vehicles`}
+                        sx={{ minWidth: 22, px: 0.75, borderRadius: 999, textAlign: "center", fontWeight: 700, bgcolor: (t) => alpha(t.palette.common.black, 0.22) }}
+                      >
+                        {n}
+                      </Box>
+                    </Stack>
+                  }
+                  sx={{ height: 34, fontSize: "0.8125rem", textTransform: "none", letterSpacing: 0 }}
+                />
+              );
+            })}
+            {reasonFilter ? (
+              <Chip
+                variant="outlined"
+                label="Clear Filter ×"
+                onClick={() => setReasonFilter(null)}
+                sx={{ height: 34, fontSize: "0.8125rem", textTransform: "none", letterSpacing: 0 }}
+              />
+            ) : null}
+          </Stack>
+        </Box>
       ) : null}
+      </Box>
 
       <Stack direction="row" flexWrap="wrap" gap={1} alignItems="center">
         {canEdit ? (

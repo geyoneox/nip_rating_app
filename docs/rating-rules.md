@@ -157,6 +157,8 @@ BA worksheet: sheet VehicleWorksheet, data from row 6. Duplicates are left out.
 | V / W | Collision answer / deductible | `ba_coll_answer` / `ba_coll_deductible` |
 | Z / AA | OTC answer / deductible | `ba_comp_answer` / `ba_comp_deductible` |
 
+Capacity: the BA template is prepared for 153 vehicles (rows 6 to 158) and the IM template for 77 items (rows 6 to 82). A larger run stays in one workbook: the extra rows are copied from the last prepared row and the filter range is extended (as in the original app). The repo copies `nip_export_ba.py` and `nip_export_im.py` match the deployed versions (BA v8, IM v5). IM descriptions are title-cased, repeated words from manufacturer, type, description and model are written once, and Equipment Type is filled on every row (the original app left it blank after row 82).
+
 IM worksheet: `nip_export_im.py` already follows the old mapping (ContractorsEquipmentSchedule from row 6; coverage row 6: T small tools maximum, U = 3, V = 3), with one difference to check:
 
 - Column D (EquipmentType). The old code gives "Cranes and Derricks" for cranes and leaves it empty otherwise. `nip_export_im.py` writes "All Other Equipment" otherwise. Check which one the template accepts.
@@ -168,7 +170,26 @@ Checked on run `2627 TABBED APP_new.pdf` (11 vehicles) after deploying `nip_reco
 
 - The Dexter scraper (`pricedigest-vins`) returns only MSRP, Is Tractor, Complete/Incomplete and Gross Vehicle Weight. It does not return Vehicle Type, Vehicle Subtype, make, model, year or Gross Combine Weight.
 - Complete/Incomplete arrives as a single letter (`I`). The function treats `I` and any text starting with "incomplete" as Incomplete.
-- Without a PriceDigest vehicle type the class code depends on the application BODY_TYPE alone. Two International trucks (body type "4X2" and "W/16ft Arbortech Chi", GVW 33,000) therefore get no class code. A rule is needed, for example "PriceDigest returned a GVW and the type is unknown: treat as truck". Not applied, because it changes the rating rules.
+- Without a PriceDigest vehicle type the class code depends on the application BODY_TYPE alone. Two International trucks (body type "4X2" and "W/16ft Arbortech Chi", GVW 33,000) therefore get no class code. Fixed on 2026-11-17 by rule 9a below.
 - Tractors need Gross Combine Weight. The scraper output seen so far has none, so a tractor would also get no class code.
 - The extraction puts the application's own class code (for example 31489, 68489) into the vehicle `sic` column. The dump rule only looks for the exact SIC `79`, so it is not affected, but the column is mislabelled.
 - Editing cost new, year, make, model, VIN or garaging state, or changing the program or insured state, now recalculates through `nip_save_edits`.
+
+## 9. Rules added after the 2526 TABBED APP 4.pdf run (2026-11-17)
+
+Run: 396 vehicles after duplicates. Before the fixes, 277 had no class code. After: 57 (46 have no VIN, 5 are not in PriceDigest, 6 have a VIN that cannot be repaired).
+
+All rules below are ASSUMED. They were not given by the product owner, so confirm each one before go-live.
+
+a. **Weight but no type.** PriceDigest returned a gross vehicle weight, the application has no type that matches, and "Is Tractor" is not Yes: treat the vehicle as a truck and pick the class code by weight. A passenger car with no body type is therefore rated as a light truck. Fix the row's body type to override it.
+b. **Two kinds of trailer, checked against the original app's BA export for the same PDF.**
+   - *Tabbed-only trailer:* make, model or body type contains "trailer" (or the row was flagged `is_trailer` at extraction). It skips PriceDigest, OCN is the cost on the application only, deductible 1,000, class code 68589 (or 69589 when the text says "utility trailer").
+   - *Trailer by name or VIN prefix:* make or model contains "Utility", "Big Tex" / "Big Tx" or "Carson", or the VIN starts with `16V`, `1D9`, `4HX`, `7G7` or `4GM`, and the text names no truck, van, SUV, common vehicle make or machine (Gator, Deere, Kubota, cart and similar). It is still validated with PriceDigest. It is rated as a trailer only when PriceDigest returned a price (MSRP) for it: OCN is the larger of cost and MSRP, class code 68589, deductible 1,000. When PriceDigest found nothing, the row gets no class code, exactly like the original app (checked on 2526 TABBED APP 4.pdf: 45 trailers with a price had 68589 or 69589, the other Big Tex rows were blank).
+   - *Summary lines at extraction:* a vehicle line with no VIN, no cost new, no stated amount and no garaging address is a line of a summary list, not a vehicle on the schedule. Extraction does not save it (the original app does not read these lines either).
+   - *Trailers card on the dashboard:* counts every row, duplicates included, that is flagged as a trailer or has a trailer class code (67489, 67589, 68489, 68589, 69489, 69589). On the 2526 file this gives 87; the original app shows 90.
+   - On run 2526 TABBED APP 4.pdf the original app's BA worksheet gave 68589 to these rows and had no class code for Big Tex "Utility" rows PriceDigest could not find; we give those 68589 as well.
+c. **VIN cleanup (in `nip_validate_start`).** A VIN that is not 17 valid characters is repaired when that gives a valid VIN: I becomes 1, O and Q become 0, and look-alike Cyrillic or Greek letters become the Latin letter or digit. The first original is kept in `edited_fields.vin` with the editor "system (VIN cleanup)". If two rows become the same VIN, the later one is marked duplicate. A VIN that is still invalid (wrong length, equipment serial numbers) stays skipped.
+d. **Validation job id.** Each validation start stores a new `active_job_id`. A worker that finds a different id stops without writing progress or a final status, so two overlapping workers cannot overwrite each other. A finished validation always shows processed = total.
+e. **BA export.** Column R (Original Cost New) uses `ocn_value`, then cost new, then stated amount. Before, it used only the application's cost new, so calculated values never reached the worksheet. An answer of No for collision or comprehensive now replaces the template's default Yes. The export is a single workbook with every vehicle that has a VIN, like the original app: template rows 6 to 158 are filled in place and later rows are copied from row 158 (same columns and styles), with vehicle numbers 1, 2, 3 and so on, and the filter range extended. Rows with no VIN are left out and counted in the warning. IM is still split across several files (77 rows per template).
+
+Not covered: tractors need Gross Combine Weight, which the scraper does not return, so a tractor still gets no class code.
